@@ -18,13 +18,19 @@ export const Login: React.FC = () => {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      const success = login(email, password);
-      setLoading(false);
-      if (success) {
-        navigate('/');
-      } else {
-        setError('Tài khoản hoặc mật khẩu không chính xác, hoặc tài khoản đã bị khóa.');
+    setTimeout(async () => {
+      try {
+        const success = await login(email, password);
+        setLoading(false);
+        if (success) {
+          navigate('/');
+        } else {
+          setError('Tài khoản hoặc mật khẩu không chính xác, hoặc tài khoản đã bị khóa.');
+        }
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+        setError('Có lỗi xảy ra khi kết nối tới máy chủ.');
       }
     }, 1000);
   };

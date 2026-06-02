@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
-import type { Project } from '../../data/mockData';
-import { ArrowLeft, Save, Sparkles } from 'lucide-react';
+import { api } from '../../services/api';
+import type { Project, Developer } from '../../data/mockData';
+import { ArrowLeft, Save, Sparkles, Upload, Loader2 } from 'lucide-react';
 
 const convertToSlug = (text: string) => {
   return text
@@ -22,9 +22,11 @@ const defaultUnsplashImages = [
 ];
 
 export const ProjectForm: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const isEditMode = !!id;
+  const isEditMode = !!routeSlug;
+
+  const [projectId, setProjectId] = useState('');
 
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -39,47 +41,113 @@ export const ProjectForm: React.FC = () => {
   const [shortDescription, setShortDescription] = useState('');
   const [description, setDescription] = useState('');
   
-  const [developers] = useState(() => MockDatabase.getDevelopers());
+  const [developers, setDevelopers] = useState<Developer[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (developers.length > 0 && !developer) {
-      setDeveloper(developers[0].name);
-    }
-  }, [developers, developer]);
-
-  useEffect(() => {
-    if (isEditMode) {
-      const projects = MockDatabase.getProjects();
-      const proj = projects.find(p => p.id === id);
-      if (proj) {
-        setName(proj.name);
-        setSlug(proj.slug);
-        setDeveloper(proj.developer);
-        setStatus(proj.status);
-        setLocation(proj.location);
-        setScale(proj.scale);
-        setPriceRange(proj.priceRange);
-        setTagsInput(proj.tags.join(', '));
-        setImage(proj.image);
-        setBanner(proj.banner);
-        setShortDescription(proj.shortDescription);
-        setDescription(proj.description);
-      } else {
-        navigate('/projects');
+    const loadInitialData = async () => {
+      try {
+        const devs = await api.getDevelopers();
+        setDevelopers(devs);
+        
+        if (isEditMode && routeSlug) {
+          const proj = await api.getProject(routeSlug);
+          setProjectId(proj.id);
+          setName(proj.name);
+          setSlug(proj.slug);
+          setDeveloper(proj.developer);
+          setStatus(proj.status);
+          setLocation(proj.location);
+          setScale(proj.scale);
+          setPriceRange(proj.priceRange);
+          setTagsInput(proj.tags.join(', '));
+          setImage(proj.image);
+          setBanner(proj.banner);
+          setShortDescription(proj.shortDescription);
+          setDescription(proj.description);
+        } else {
+          if (devs.length > 0) {
+            setDeveloper(devs[0].name);
+          }
+          const randomImg = defaultUnsplashImages[Math.floor(Math.random() * defaultUnsplashImages.length)];
+          setImage(randomImg);
+          setBanner(randomImg);
+        }
+      } catch (err) {
+        console.error(err);
+        if (isEditMode) navigate('/projects');
       }
-    } else {
-      const randomImg = defaultUnsplashImages[Math.floor(Math.random() * defaultUnsplashImages.length)];
-      setImage(randomImg);
-      setBanner(randomImg);
-    }
-  }, [id, isEditMode, navigate]);
+    };
+    loadInitialData();
+  }, [routeSlug, isEditMode, navigate]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setName(val);
     if (!isEditMode) {
       setSlug(convertToSlug(val));
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setImageUploadError('Kích thước ảnh tối đa là 5MB');
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      setImageUploadError(null);
+      const result = await api.uploadFile(file);
+      setImage(result.url);
+      
+      if (errors.image) {
+        setErrors(prev => {
+          const { image: _, ...rest } = prev;
+          return rest;
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setImageUploadError(err.message || 'Lỗi khi tải ảnh lên server');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setBannerUploadError('Kích thước ảnh tối đa là 5MB');
+      return;
+    }
+
+    try {
+      setIsUploadingBanner(true);
+      setBannerUploadError(null);
+      const result = await api.uploadFile(file);
+      setBanner(result.url);
+      
+      if (errors.banner) {
+        setErrors(prev => {
+          const { banner: _, ...rest } = prev;
+          return rest;
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setBannerUploadError(err.message || 'Lỗi khi tải ảnh lên server');
+    } finally {
+      setIsUploadingBanner(false);
     }
   };
 
@@ -100,41 +168,36 @@ export const ProjectForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const projects = MockDatabase.getProjects();
     const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+    const projData = {
+      name,
+      slug,
+      developer,
+      status,
+      location,
+      scale,
+      priceRange,
+      tags,
+      image,
+      banner,
+      shortDescription,
+      description
+    };
 
-    if (isEditMode) {
-      const updated = projects.map(p => {
-        if (p.id === id) {
-          return { ...p, name, slug, developer, status, location, scale, priceRange, tags, image, banner, shortDescription, description };
-        }
-        return p;
-      });
-      MockDatabase.saveProjects(updated);
-    } else {
-      const newProj: Project = {
-        id: `proj-${Date.now()}`,
-        name,
-        slug,
-        developer,
-        status,
-        location,
-        scale,
-        priceRange,
-        tags,
-        image,
-        banner,
-        shortDescription,
-        description
-      };
-      MockDatabase.saveProjects([...projects, newProj]);
+    try {
+      if (isEditMode && projectId) {
+        await api.updateProject(projectId, projData);
+      } else {
+        await api.createProject(projData);
+      }
+      navigate('/projects');
+    } catch (err) {
+      console.error(err);
     }
-
-    navigate('/projects');
   };
 
   return (
@@ -274,47 +337,119 @@ export const ProjectForm: React.FC = () => {
               />
             </div>
 
-            {/* Main Image URL */}
+            {/* Main Image Upload */}
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ảnh đại diện dự án URL <span className="text-red-500">*</span></label>
-              <div className="flex gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="https://images.unsplash.com/..."
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  className={`flex-1 px-3 py-2 bg-slate-55 border ${errors.image ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-650/20 text-xs text-slate-700 transition-all`}
-                />
-                <div className="w-16 h-10 rounded border border-slate-200 bg-slate-55 flex items-center justify-center overflow-hidden shrink-0">
-                  {image ? (
-                    <img src={image} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=60&h=40&q=80' }} />
-                  ) : (
-                    <span className="text-[9px] text-slate-400 font-bold">No Image</span>
-                  )}
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ảnh đại diện dự án <span className="text-red-500">*</span></label>
+              <div className="flex items-start gap-4">
+                <div className="relative flex-1">
+                  <input
+                    type="file"
+                    id="project-image-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={isUploadingImage}
+                  />
+                  <label
+                    htmlFor="project-image-upload"
+                    className={`flex flex-col items-center justify-center border-2 border-dashed ${
+                      errors.image || imageUploadError ? 'border-red-300 hover:border-red-400 bg-red-50/20' : 'border-slate-300 hover:border-indigo-500 bg-slate-50/50'
+                    } rounded-xl p-6 cursor-pointer transition-all duration-200 group text-center min-h-[140px]`}
+                  >
+                    {isUploadingImage ? (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                        <span className="text-xs text-slate-500 font-medium">Đang tải ảnh lên S3...</span>
+                      </div>
+                    ) : image ? (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <div className="w-20 h-14 rounded-lg border border-slate-200 bg-white p-1 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-200">
+                          <img src={image} alt="Preview" className="max-w-full max-h-full object-cover rounded" />
+                        </div>
+                        <span className="text-[10px] text-indigo-600 font-bold group-hover:underline uppercase tracking-wider">Chọn ảnh khác</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <div className="p-3 bg-slate-100 rounded-full group-hover:bg-indigo-50 transition-colors duration-200">
+                          <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-600 font-semibold">Tải ảnh đại diện lên S3</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Hỗ trợ định dạng PNG, JPG, SVG tối đa 5MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </label>
                 </div>
+                {image && (
+                  <div className="hidden sm:block flex-1 space-y-2 text-slate-500 bg-slate-50 border border-slate-200/60 rounded-xl p-4 text-[11px] self-stretch">
+                    <p className="font-bold text-slate-600 uppercase text-[9px] tracking-wider">Thông tin tệp tin</p>
+                    <div className="break-all space-y-1">
+                      <p><span className="font-semibold">Đường dẫn S3:</span></p>
+                      <a href={image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline break-all block">{image}</a>
+                    </div>
+                  </div>
+                )}
               </div>
+              {imageUploadError && <p className="text-[10px] text-red-500 font-semibold">{imageUploadError}</p>}
               {errors.image && <p className="text-[10px] text-red-500 font-semibold">{errors.image}</p>}
             </div>
 
-            {/* Banner Image URL */}
+            {/* Banner Image Upload */}
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ảnh banner dự án URL <span className="text-red-500">*</span></label>
-              <div className="flex gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="https://images.unsplash.com/..."
-                  value={banner}
-                  onChange={(e) => setBanner(e.target.value)}
-                  className={`flex-1 px-3 py-2 bg-slate-50 border ${errors.banner ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-650/20 text-xs text-slate-700 transition-all`}
-                />
-                <div className="w-16 h-10 rounded border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {banner ? (
-                    <img src={banner} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=60&h=40&q=80' }} />
-                  ) : (
-                    <span className="text-[9px] text-slate-400 font-bold">No Image</span>
-                  )}
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ảnh banner dự án <span className="text-red-500">*</span></label>
+              <div className="flex items-start gap-4">
+                <div className="relative flex-1">
+                  <input
+                    type="file"
+                    id="project-banner-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBannerUpload}
+                    disabled={isUploadingBanner}
+                  />
+                  <label
+                    htmlFor="project-banner-upload"
+                    className={`flex flex-col items-center justify-center border-2 border-dashed ${
+                      errors.banner || bannerUploadError ? 'border-red-300 hover:border-red-400 bg-red-50/20' : 'border-slate-300 hover:border-indigo-500 bg-slate-50/50'
+                    } rounded-xl p-6 cursor-pointer transition-all duration-200 group text-center min-h-[140px]`}
+                  >
+                    {isUploadingBanner ? (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                        <span className="text-xs text-slate-500 font-medium">Đang tải ảnh lên S3...</span>
+                      </div>
+                    ) : banner ? (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <div className="w-20 h-14 rounded-lg border border-slate-200 bg-white p-1 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-200">
+                          <img src={banner} alt="Preview" className="max-w-full max-h-full object-cover rounded" />
+                        </div>
+                        <span className="text-[10px] text-indigo-600 font-bold group-hover:underline uppercase tracking-wider">Chọn ảnh khác</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <div className="p-3 bg-slate-100 rounded-full group-hover:bg-indigo-50 transition-colors duration-200">
+                          <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-600 font-semibold">Tải ảnh banner lên S3</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Hỗ trợ định dạng PNG, JPG, SVG tối đa 5MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </label>
                 </div>
+                {banner && (
+                  <div className="hidden sm:block flex-1 space-y-2 text-slate-500 bg-slate-50 border border-slate-200/60 rounded-xl p-4 text-[11px] self-stretch">
+                    <p className="font-bold text-slate-600 uppercase text-[9px] tracking-wider">Thông tin tệp tin</p>
+                    <div className="break-all space-y-1">
+                      <p><span className="font-semibold">Đường dẫn S3:</span></p>
+                      <a href={banner} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline break-all block">{banner}</a>
+                    </div>
+                  </div>
+                )}
               </div>
+              {bannerUploadError && <p className="text-[10px] text-red-500 font-semibold">{bannerUploadError}</p>}
               {errors.banner && <p className="text-[10px] text-red-500 font-semibold">{errors.banner}</p>}
             </div>
 
@@ -356,9 +491,18 @@ export const ProjectForm: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold uppercase transition-colors cursor-pointer"
+              disabled={isUploadingImage || isUploadingBanner}
+              className={`flex items-center gap-1.5 px-4 py-2 ${
+                isUploadingImage || isUploadingBanner
+                  ? 'bg-indigo-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
+              } text-white rounded font-bold uppercase transition-colors`}
             >
-              <Save className="w-3.5 h-3.5" />
+              {isUploadingImage || isUploadingBanner ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
               <span>Lưu dự án</span>
             </button>
           </div>

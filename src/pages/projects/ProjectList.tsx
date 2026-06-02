@@ -1,26 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
 import type { Project } from '../../data/mockData';
 import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Filter } from 'lucide-react';
 
 export const ProjectList: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>(() => MockDatabase.getProjects());
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+
+  useEffect(() => {
+    api.getProjects()
+      .then(data => {
+        setProjects(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
 
   const handleDeleteClick = (project: Project) => {
     setDeleteTarget(project);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    const updated = projects.filter(p => p.id !== deleteTarget.id);
-    MockDatabase.saveProjects(updated);
-    setProjects(updated);
-    setDeleteTarget(null);
+    try {
+      await api.deleteProject(deleteTarget.id);
+      setProjects(projects.filter(p => p.id !== deleteTarget.id));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteTarget(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
 
   const filteredProjects = projects.filter(proj => {
     const matchesSearch = proj.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -103,7 +129,7 @@ export const ProjectList: React.FC = () => {
                           className="w-10 h-7 rounded bg-slate-50 object-cover border border-slate-200 shrink-0"
                         />
                         <div className="font-bold text-slate-800 hover:text-indigo-650">
-                          <Link to={`/projects/${proj.id}`}>{proj.name}</Link>
+                          <Link to={`/projects/${proj.slug}`}>{proj.name}</Link>
                         </div>
                       </div>
                     </td>
@@ -141,14 +167,14 @@ export const ProjectList: React.FC = () => {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-center gap-1">
                         <Link 
-                          to={`/projects/${proj.id}`}
+                          to={`/projects/${proj.slug}`}
                           className="p-1.5 rounded text-slate-450 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                           title="Xem chi tiết"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </Link>
                         <Link 
-                          to={`/projects/${proj.id}/edit`}
+                          to={`/projects/${proj.slug}/edit`}
                           className="p-1.5 rounded text-slate-450 hover:bg-slate-100 hover:text-indigo-655 transition-colors"
                           title="Chỉnh sửa"
                         >
@@ -156,7 +182,7 @@ export const ProjectList: React.FC = () => {
                         </Link>
                         <button 
                           onClick={() => handleDeleteClick(proj)}
-                          className="p-1.5 rounded text-slate-450 hover:bg-slate-100 hover:text-red-600 transition-colors"
+                          className="p-1.5 rounded text-slate-450 hover:bg-slate-100 hover:text-red-655 transition-colors"
                           title="Xóa"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
 import type { Product, Project, Developer } from '../../data/mockData';
-import { ArrowLeft, Save, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Upload, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const convertToSlug = (text: string) => {
   return text
@@ -31,9 +31,11 @@ const defaultUnsplashPics = [
 ];
 
 export const ProductForm: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const isEditMode = !!id;
+  const isEditMode = !!routeSlug;
+
+  const [productId, setProductId] = useState('');
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
@@ -50,7 +52,10 @@ export const ProductForm: React.FC = () => {
   const [productType, setProductType] = useState<Product['productType']>('villa');
   const [isPremium, setIsPremium] = useState(false);
   const [developer, setDeveloper] = useState('');
-  const [imagesInput, setImagesInput] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [status, setStatus] = useState<Product['status']>('Còn hàng');
   const [direction, setDirection] = useState('Đông Nam');
   const [legal, setLegal] = useState('Sổ đỏ lâu dài');
@@ -58,42 +63,48 @@ export const ProductForm: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const projs = MockDatabase.getProjects();
-    const devs = MockDatabase.getDevelopers();
-    setProjects(projs);
-    setDevelopers(devs);
+    const loadInitialData = async () => {
+      try {
+        const [projs, devs] = await Promise.all([
+          api.getProjects(),
+          api.getDevelopers()
+        ]);
+        setProjects(projs);
+        setDevelopers(devs);
 
-    if (isEditMode) {
-      const products = MockDatabase.getProducts();
-      const prod = products.find(p => p.id === id);
-      if (prod) {
-        setTitle(prod.title);
-        setSlug(prod.slug);
-        setPrice(prod.price);
-        setArea(prod.area);
-        setBedrooms(prod.bedrooms);
-        setBathrooms(prod.bathrooms);
-        setLocation(prod.location);
-        setDescription(prod.description);
-        setProjectSlug(prod.projectSlug);
-        setProductType(prod.productType);
-        setIsPremium(prod.isPremium);
-        setDeveloper(prod.developer || '');
-        setImagesInput(prod.images.join(', '));
-        setStatus(prod.status);
-        setDirection(prod.direction);
-        setLegal(prod.legal);
-      } else {
-        navigate('/products');
+        if (isEditMode && routeSlug) {
+          const prod = await api.getProduct(routeSlug);
+          setProductId(prod.id);
+          setTitle(prod.title);
+          setSlug(prod.slug);
+          setPrice(prod.price);
+          setArea(prod.area);
+          setBedrooms(prod.bedrooms);
+          setBathrooms(prod.bathrooms);
+          setLocation(prod.location);
+          setDescription(prod.description);
+          setProjectSlug(prod.projectSlug);
+          setProductType(prod.productType);
+          setIsPremium(prod.isPremium);
+          setDeveloper(prod.developer || '');
+          setImages(prod.images || []);
+          setStatus(prod.status);
+          setDirection(prod.direction);
+          setLegal(prod.legal);
+        } else {
+          const randomPic = defaultUnsplashPics[Math.floor(Math.random() * defaultUnsplashPics.length)];
+          setImages([randomPic]);
+          if (devs.length > 0) {
+            setDeveloper(devs[0].name);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        if (isEditMode) navigate('/products');
       }
-    } else {
-      const randomPic = defaultUnsplashPics[Math.floor(Math.random() * defaultUnsplashPics.length)];
-      setImagesInput(randomPic);
-      if (devs.length > 0) {
-        setDeveloper(devs[0].name);
-      }
-    }
-  }, [id, isEditMode, navigate]);
+    };
+    loadInitialData();
+  }, [routeSlug, isEditMode, navigate]);
 
   const handleProjectChange = (projSlug: string) => {
     setProjectSlug(projSlug);
@@ -113,6 +124,66 @@ export const ProductForm: React.FC = () => {
     }
   };
 
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    const uploadedUrls: string[] = [];
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`Ảnh "${file.name}" vượt quá dung lượng tối đa 5MB`);
+        }
+        const result = await api.uploadFile(file);
+        uploadedUrls.push(result.url);
+      }
+      
+      setImages(prev => [...prev, ...uploadedUrls]);
+      
+      if (errors.images) {
+        setErrors(prev => {
+          const { images: _, ...rest } = prev;
+          return rest;
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setUploadError(err.message || 'Lỗi khi tải ảnh lên server');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteImage = (index: number) => {
+    setImages(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleMoveLeft = (index: number) => {
+    if (index === 0) return;
+    setImages(prev => {
+      const updated = [...prev];
+      const temp = updated[index - 1];
+      updated[index - 1] = updated[index];
+      updated[index] = temp;
+      return updated;
+    });
+  };
+
+  const handleMoveRight = (index: number) => {
+    if (index === images.length - 1) return;
+    setImages(prev => {
+      const updated = [...prev];
+      const temp = updated[index + 1];
+      updated[index + 1] = updated[index];
+      updated[index] = temp;
+      return updated;
+    });
+  };
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = 'Tiêu đề sản phẩm không được để trống';
@@ -121,81 +192,52 @@ export const ProductForm: React.FC = () => {
     if (area === '' || area <= 0) newErrors.area = 'Diện tích phải là số dương lớn hơn 0';
     if (!location.trim()) newErrors.location = 'Vị trí địa chỉ không được để trống';
     if (!description.trim()) newErrors.description = 'Mô tả chi tiết không được để trống';
-    if (!imagesInput.trim()) newErrors.images = 'Ít nhất phải có 1 hình ảnh URL';
+    if (images.length === 0) newErrors.images = 'Ít nhất phải có 1 hình ảnh sản phẩm';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-
-    const products = MockDatabase.getProducts();
-    const images = imagesInput
-      .split(',')
-      .map(img => img.trim())
-      .filter(img => img.length > 0);
 
     const priceNum = Number(price);
     const areaNum = Number(area);
     const pricePerSqm = Math.round((priceNum * 1000) / areaNum);
     const productTypeName = productTypesList.find(t => t.value === productType)?.label || productType;
 
-    if (isEditMode) {
-      const updated = products.map(p => {
-        if (p.id === id) {
-          return { 
-            ...p, 
-            title, 
-            slug, 
-            price: priceNum, 
-            pricePerSqm,
-            area: areaNum, 
-            bedrooms, 
-            bathrooms, 
-            location, 
-            description, 
-            projectSlug, 
-            productType, 
-            productTypeName,
-            isPremium, 
-            developer: developer || undefined, 
-            images, 
-            status, 
-            direction, 
-            legal 
-          };
-        }
-        return p;
-      });
-      MockDatabase.saveProducts(updated);
-    } else {
-      const newProd: Product = {
-        id: `prod-${Date.now()}`,
-        title,
-        slug,
-        price: priceNum,
-        pricePerSqm,
-        area: areaNum,
-        bedrooms,
-        bathrooms,
-        location,
-        description,
-        projectSlug,
-        productType,
-        productTypeName,
-        isPremium,
-        developer: developer || undefined,
-        images,
-        status,
-        direction,
-        legal
-      };
-      MockDatabase.saveProducts([...products, newProd]);
-    }
+    const prodData = {
+      title,
+      slug,
+      price: priceNum,
+      pricePerSqm,
+      area: areaNum,
+      bedrooms,
+      bathrooms,
+      location,
+      description,
+      projectSlug,
+      productType,
+      productTypeName,
+      isPremium,
+      developer: developer || undefined,
+      images,
+      status,
+      direction,
+      legal
+    };
 
-    navigate('/products');
+    try {
+      if (isEditMode && productId) {
+        await api.updateProduct(productId, prodData);
+      } else {
+        await api.createProduct(prodData);
+      }
+      navigate('/products');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -230,7 +272,7 @@ export const ProductForm: React.FC = () => {
                 placeholder="Ví dụ: Căn Hộ Penthouse View Trọn Biển Hồ Ngọc Trai"
                 value={title}
                 onChange={handleTitleChange}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.title ? 'border-red-555 focus:border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.title ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.title && <p className="text-[10px] text-red-500 font-semibold">{errors.title}</p>}
             </div>
@@ -246,7 +288,7 @@ export const ProductForm: React.FC = () => {
                 placeholder="can-ho-penthouse-ocean-park"
                 value={slug}
                 onChange={(e) => setSlug(convertToSlug(e.target.value))}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.slug ? 'border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.slug ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.slug && <p className="text-[10px] text-red-500 font-semibold">{errors.slug}</p>}
             </div>
@@ -311,7 +353,7 @@ export const ProductForm: React.FC = () => {
                 placeholder="Ví dụ: 8.5"
                 value={price}
                 onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.price ? 'border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.price ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.price && <p className="text-[10px] text-red-500 font-semibold">{errors.price}</p>}
             </div>
@@ -324,7 +366,7 @@ export const ProductForm: React.FC = () => {
                 placeholder="Ví dụ: 120"
                 value={area}
                 onChange={(e) => setArea(e.target.value === '' ? '' : Number(e.target.value))}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.area ? 'border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.area ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.area && <p className="text-[10px] text-red-500 font-semibold">{errors.area}</p>}
             </div>
@@ -414,33 +456,128 @@ export const ProductForm: React.FC = () => {
                 placeholder="Ví dụ: Phân khu Ngọc Trai, Vinhomes Ocean Park 1, Gia Lâm, Hà Nội"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.location ? 'border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.location ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.location && <p className="text-[10px] text-red-500 font-semibold">{errors.location}</p>}
             </div>
 
-            {/* Images URLs */}
-            <div className="space-y-1.5 md:col-span-3">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Danh sách ảnh URLs (cách nhau bằng dấu phẩy) <span className="text-red-500">*</span></label>
-              <div className="flex gap-4 items-center">
-                <textarea
-                  placeholder="Link 1, Link 2..."
-                  value={imagesInput}
-                  onChange={(e) => setImagesInput(e.target.value)}
-                  rows={2}
-                  className={`flex-1 px-3 py-2 bg-slate-50 border ${errors.images ? 'border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+            {/* Multi Images S3 Upload */}
+            <div className="space-y-2 md:col-span-3">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Hình ảnh sản phẩm (Ảnh đầu tiên sẽ làm ảnh đại diện) <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="product-images-upload"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImagesUpload}
+                  disabled={isUploading}
                 />
-                
-                {/* Images Preview thumb */}
-                <div className="w-16 h-10 rounded border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {imagesInput.split(',')[0] ? (
-                    <img src={imagesInput.split(',')[0].trim()} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=60&h=40&q=80' }} />
+                <label
+                  htmlFor="product-images-upload"
+                  className={`flex flex-col items-center justify-center border-2 border-dashed ${
+                    errors.images || uploadError ? 'border-red-300 hover:border-red-400 bg-red-50/20' : 'border-slate-300 hover:border-indigo-500 bg-slate-50/50'
+                  } rounded-xl p-6 cursor-pointer transition-all duration-200 group text-center min-h-[120px]`}
+                >
+                  {isUploading ? (
+                    <div className="space-y-2 flex flex-col items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                      <span className="text-xs text-slate-500 font-medium">Đang tải ảnh lên S3...</span>
+                    </div>
                   ) : (
-                    <span className="text-[9px] text-slate-400 font-bold">No Image</span>
+                    <div className="space-y-2 flex flex-col items-center justify-center">
+                      <div className="p-3 bg-slate-100 rounded-full group-hover:bg-indigo-50 transition-colors duration-200">
+                        <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-600 font-semibold">Tải ảnh lên (Hỗ trợ chọn & tải nhiều ảnh cùng lúc)</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Kéo thả hoặc click chọn hình ảnh định dạng PNG, JPG tối đa 5MB</p>
+                      </div>
+                    </div>
                   )}
-                </div>
+                </label>
               </div>
+              {uploadError && <p className="text-[10px] text-red-500 font-semibold">{uploadError}</p>}
               {errors.images && <p className="text-[10px] text-red-500 font-semibold">{errors.images}</p>}
+              {images.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Danh sách ảnh đã tải lên ({images.length}) - Kéo thả hoặc bấm mũi tên để sắp xếp thứ tự</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {images.map((img, index) => {
+                      const isMain = index === 0;
+                      return (
+                        <div
+                          key={`${img}-${index}`}
+                          draggable
+                          onDragStart={() => setDraggedIndex(index)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            if (draggedIndex === null || draggedIndex === index) return;
+                            setImages(prev => {
+                              const updated = [...prev];
+                              const [draggedItem] = updated.splice(draggedIndex, 1);
+                              updated.splice(index, 0, draggedItem);
+                              return updated;
+                            });
+                            setDraggedIndex(null);
+                          }}
+                          onDragEnd={() => setDraggedIndex(null)}
+                          className={`relative aspect-square rounded-lg overflow-hidden border ${
+                            isMain ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'
+                          } bg-slate-50 bg-white group transition-all cursor-grab active:cursor-grabbing hover:shadow-sm`}
+                        >
+                          <img src={img} alt={`Product ${index}`} className="w-full h-full object-cover select-none" />
+                          {isMain && (
+                            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-bold bg-indigo-600 text-white shadow-sm tracking-wider uppercase">
+                              Ảnh chính
+                            </span>
+                          )}
+                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5">
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteImage(index)}
+                                className="p-1 rounded bg-red-600 text-white hover:bg-red-700 shadow-sm cursor-pointer transition-colors"
+                                title="Xóa ảnh này"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <div className="flex justify-between items-center bg-slate-900/60 backdrop-blur-xs rounded p-0.5">
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => handleMoveLeft(index)}
+                                className={`p-1 rounded text-white ${
+                                  index === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-800 cursor-pointer'
+                                }`}
+                                title="Di chuyển lên trước"
+                              >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="text-[9px] text-white font-bold px-1 select-none">
+                                {index + 1}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={index === images.length - 1}
+                                onClick={() => handleMoveRight(index)}
+                                className={`p-1 rounded text-white ${
+                                  index === images.length - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-800 cursor-pointer'
+                                }`}
+                                title="Di chuyển ra sau"
+                              >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -451,7 +588,7 @@ export const ProductForm: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.description ? 'border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.description ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.description && <p className="text-[10px] text-red-500 font-semibold">{errors.description}</p>}
             </div>
@@ -468,9 +605,16 @@ export const ProductForm: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold uppercase transition-colors cursor-pointer"
+              disabled={isUploading}
+              className={`flex items-center gap-1.5 px-4 py-2 ${
+                isUploading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
+              } text-white rounded font-bold uppercase transition-colors`}
             >
-              <Save className="w-3.5 h-3.5" />
+              {isUploading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
               <span>Lưu tin đăng</span>
             </button>
           </div>

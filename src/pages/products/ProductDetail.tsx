@@ -1,17 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
+import type { Product, Project } from '../../data/mockData';
 import { ArrowLeft, Edit, Building2, MapPin, Layers, Key, Navigation, Bed, Bath, Maximize2 } from 'lucide-react';
 
 export const ProductDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   
-  const products = MockDatabase.getProducts();
-  const product = products.find(p => p.id === id);
-  const projects = MockDatabase.getProjects();
-
+  const [product, setProduct] = useState<Product | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!slug) return;
+    const fetchData = async () => {
+      try {
+        const [prod, projs] = await Promise.all([
+          api.getProduct(slug),
+          api.getProjects()
+        ]);
+        setProduct(prod);
+        setProjects(projs);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -25,6 +52,7 @@ export const ProductDetail: React.FC = () => {
     );
   }
 
+
   const getProjectName = (slug: string) => {
     if (slug === 'ngoai-du-an') return 'Ngoài dự án';
     const found = projects.find(p => p.slug === slug);
@@ -34,7 +62,7 @@ export const ProductDetail: React.FC = () => {
   const getProjectLink = (slug: string) => {
     if (slug === 'ngoai-du-an') return null;
     const found = projects.find(p => p.slug === slug);
-    return found ? `/projects/${found.id}` : null;
+    return found ? `/projects/${found.slug}` : null;
   };
 
   const images = product.images && product.images.length > 0 
@@ -54,7 +82,7 @@ export const ProductDetail: React.FC = () => {
         </button>
         
         <Link 
-          to={`/products/${product.id}/edit`}
+          to={`/products/${product.slug}/edit`}
           className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-indigo-600 hover:text-indigo-700 hover:border-slate-350 rounded font-bold uppercase transition-colors"
         >
           <Edit className="w-3.5 h-3.5" />

@@ -1,14 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
+import type { User } from '../../data/mockData';
 import { ArrowLeft, Edit, Shield, Mail, Calendar, Key, UserCheck, UserX } from 'lucide-react';
 
 export const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const users = MockDatabase.getUsers();
-  const user = users.find(u => u.id === id);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    api.getUser(id)
+      .then(usr => {
+        setUser(usr);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -21,6 +43,7 @@ export const UserDetail: React.FC = () => {
       </div>
     );
   }
+
 
   return (
     <div className="space-y-6 text-xs">

@@ -1,25 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
 import type { Developer } from '../../data/mockData';
 import { Search, Plus, Eye, Edit, Trash2, AlertTriangle } from 'lucide-react';
 
 export const DeveloperList: React.FC = () => {
-  const [developers, setDevelopers] = useState<Developer[]>(() => MockDatabase.getDevelopers());
+  const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Developer | null>(null);
+
+  useEffect(() => {
+    api.getDevelopers()
+      .then(data => {
+        setDevelopers(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
 
   const handleDeleteClick = (dev: Developer) => {
     setDeleteTarget(dev);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    const updated = developers.filter(d => d.id !== deleteTarget.id);
-    MockDatabase.saveDevelopers(updated);
-    setDevelopers(updated);
-    setDeleteTarget(null);
+    try {
+      await api.deleteDeveloper(deleteTarget.id);
+      setDevelopers(developers.filter(d => d.id !== deleteTarget.id));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteTarget(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
 
   const filteredDevelopers = developers.filter(dev => 
     dev.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -77,7 +103,7 @@ export const DeveloperList: React.FC = () => {
                           className="w-8 h-8 rounded bg-slate-50 object-cover border border-slate-200 shrink-0"
                         />
                         <div className="font-bold text-slate-800 hover:text-indigo-600">
-                          <Link to={`/developers/${dev.id}`}>{dev.name}</Link>
+                          <Link to={`/developers/${dev.slug}`}>{dev.name}</Link>
                         </div>
                       </div>
                     </td>
@@ -96,14 +122,14 @@ export const DeveloperList: React.FC = () => {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-center gap-1">
                         <Link 
-                          to={`/developers/${dev.id}`}
+                          to={`/developers/${dev.slug}`}
                           className="p-1.5 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                           title="Xem chi tiết"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </Link>
                         <Link 
-                          to={`/developers/${dev.id}/edit`}
+                          to={`/developers/${dev.slug}/edit`}
                           className="p-1.5 rounded text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
                           title="Chỉnh sửa"
                         >

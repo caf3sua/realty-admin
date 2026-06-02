@@ -1,14 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
+import type { Developer, Project } from '../../data/mockData';
 import { ArrowLeft, Edit, Layers, Globe } from 'lucide-react';
 
 export const DeveloperDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   
-  const developers = MockDatabase.getDevelopers();
-  const developer = developers.find(d => d.id === id);
+  const [developer, setDeveloper] = useState<Developer | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!slug) return;
+    const fetchData = async () => {
+      try {
+        const [dev, projs] = await Promise.all([
+          api.getDeveloper(slug),
+          api.getProjects()
+        ]);
+        setDeveloper(dev);
+        setProjects(projs.filter(p => p.developer.toLowerCase() === dev.name.toLowerCase()));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   if (!developer) {
     return (
@@ -21,11 +50,6 @@ export const DeveloperDetail: React.FC = () => {
       </div>
     );
   }
-
-  // Find related projects by matching the developer name
-  const projects = MockDatabase.getProjects().filter(p => 
-    p.developer.toLowerCase() === developer.name.toLowerCase()
-  );
 
   return (
     <div className="space-y-6 text-xs">
@@ -40,7 +64,7 @@ export const DeveloperDetail: React.FC = () => {
         </button>
         
         <Link 
-          to={`/developers/${developer.id}/edit`}
+          to={`/developers/${developer.slug}/edit`}
           className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-555 text-indigo-600 hover:text-indigo-750 rounded font-bold uppercase transition-colors"
         >
           <Edit className="w-3.5 h-3.5" />
@@ -112,7 +136,7 @@ export const DeveloperDetail: React.FC = () => {
             {projects.map((proj) => (
               <Link 
                 key={proj.id} 
-                to={`/projects/${proj.id}`}
+                to={`/projects/${proj.slug}`}
                 className="border border-slate-200 hover:border-slate-350 rounded p-3.5 flex gap-3 transition-all group bg-slate-50/30 hover:bg-slate-50"
               >
                 <img 

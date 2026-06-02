@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
 import type { User } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -19,17 +19,18 @@ export const UserForm: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (isEditMode) {
-      const users = MockDatabase.getUsers();
-      const usr = users.find(u => u.id === id);
-      if (usr) {
-        setName(usr.name);
-        setEmail(usr.email);
-        setRole(usr.role);
-        setStatus(usr.status);
-      } else {
-        navigate('/users');
-      }
+    if (isEditMode && id) {
+      api.getUser(id)
+        .then(usr => {
+          setName(usr.name);
+          setEmail(usr.email);
+          setRole(usr.role);
+          setStatus(usr.status);
+        })
+        .catch(err => {
+          console.error(err);
+          navigate('/users');
+        });
     }
   }, [id, isEditMode, navigate]);
 
@@ -48,7 +49,7 @@ export const UserForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
@@ -57,36 +58,29 @@ export const UserForm: React.FC = () => {
       return;
     }
 
-    const users = MockDatabase.getUsers();
+    try {
+      const users = await api.getUsers();
 
-    if (isEditMode) {
-      const updated = users.map(u => {
-        if (u.id === id) {
-          return { ...u, name, email, role, status };
+      if (isEditMode && id) {
+        await api.updateUser(id, { name, email, role, status, createdAt: users.find(u => u.id === id)?.createdAt || new Date().toISOString().split('T')[0] });
+      } else {
+        const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+        if (emailExists) {
+          setErrors({ email: 'Email này đã tồn tại trên hệ thống.' });
+          return;
         }
-        return u;
-      });
-      MockDatabase.saveUsers(updated);
-    } else {
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        name,
-        email,
-        role,
-        status,
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      
-      const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
-      if (emailExists) {
-        setErrors({ email: 'Email này đã tồn tại trên hệ thống.' });
-        return;
+        await api.createUser({
+          name,
+          email,
+          role,
+          status,
+          createdAt: new Date().toISOString().split('T')[0]
+        });
       }
-
-      MockDatabase.saveUsers([...users, newUser]);
+      navigate('/users');
+    } catch (err) {
+      console.error(err);
     }
-
-    navigate('/users');
   };
 
   return (

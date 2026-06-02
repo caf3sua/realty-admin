@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MockDatabase } from '../data/mockData';
+import { api } from '../services/api';
+import type { Developer, Project, Product, User } from '../data/mockData';
 import { 
   Building2, 
   Layers, 
@@ -11,10 +12,42 @@ import {
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const developers = MockDatabase.getDevelopers();
-  const projects = MockDatabase.getProjects();
-  const products = MockDatabase.getProducts();
-  const users = MockDatabase.getUsers();
+  const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [devs, projs, prods, usrs] = await Promise.all([
+          api.getDevelopers(),
+          api.getProjects(),
+          api.getProducts(),
+          api.getUsers()
+        ]);
+        setDevelopers(devs);
+        setProjects(projs);
+        setProducts(prods);
+        setUsers(usrs);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
 
   const stats = [
     { 

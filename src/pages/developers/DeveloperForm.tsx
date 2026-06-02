@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
-import type { Developer } from '../../data/mockData';
-import { ArrowLeft, Save, Sparkles } from 'lucide-react';
+import { api } from '../../services/api';
+import { ArrowLeft, Save, Sparkles, Upload, Loader2 } from 'lucide-react';
 
 const convertToSlug = (text: string) => {
   return text
@@ -15,18 +14,13 @@ const convertToSlug = (text: string) => {
     .replace(/\s+/g, '-');
 };
 
-const defaultUnsplashLogos = [
-  'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&w=150&h=150&q=80',
-  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=150&h=150&q=80',
-  'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=150&h=150&q=80',
-  'https://images.unsplash.com/photo-1572120360610-d971b9d7767c?auto=format&fit=crop&w=150&h=150&q=80'
-];
 
 export const DeveloperForm: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const isEditMode = !!id;
+  const isEditMode = !!routeSlug;
 
+  const [developerId, setDeveloperId] = useState('');
   const [name, setName] = useState('');
   const [logo, setLogo] = useState('');
   const [title, setTitle] = useState('');
@@ -35,26 +29,56 @@ export const DeveloperForm: React.FC = () => {
   const [linkText, setLinkText] = useState('');
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Kích thước ảnh tối đa là 5MB');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      setUploadError(null);
+      const result = await api.uploadFile(file);
+      setLogo(result.url);
+      
+      if (errors.logo) {
+        setErrors(prev => {
+          const { logo: _, ...rest } = prev;
+          return rest;
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setUploadError(err.message || 'Lỗi khi tải ảnh lên server');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   useEffect(() => {
-    if (isEditMode) {
-      const developers = MockDatabase.getDevelopers();
-      const dev = developers.find(d => d.id === id);
-      if (dev) {
-        setName(dev.name);
-        setLogo(dev.logo);
-        setTitle(dev.title);
-        setDescription(dev.description);
-        setSlug(dev.slug);
-        setLinkText(dev.linkText);
-      } else {
-        navigate('/developers');
-      }
-    } else {
-      const randomLogo = defaultUnsplashLogos[Math.floor(Math.random() * defaultUnsplashLogos.length)];
-      setLogo(randomLogo);
+    if (isEditMode && routeSlug) {
+      api.getDeveloper(routeSlug)
+        .then(dev => {
+          setDeveloperId(dev.id);
+          setName(dev.name);
+          setLogo(dev.logo);
+          setTitle(dev.title);
+          setDescription(dev.description);
+          setSlug(dev.slug);
+          setLinkText(dev.linkText);
+        })
+        .catch(err => {
+          console.error(err);
+          navigate('/developers');
+        });
     }
-  }, [id, isEditMode, navigate]);
+  }, [routeSlug, isEditMode, navigate]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -77,34 +101,21 @@ export const DeveloperForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const developers = MockDatabase.getDevelopers();
-
-    if (isEditMode) {
-      const updated = developers.map(d => {
-        if (d.id === id) {
-          return { ...d, name, logo, title, description, slug, linkText };
-        }
-        return d;
-      });
-      MockDatabase.saveDevelopers(updated);
-    } else {
-      const newDev: Developer = {
-        id: `dev-${Date.now()}`,
-        name,
-        logo,
-        title,
-        description,
-        slug,
-        linkText
-      };
-      MockDatabase.saveDevelopers([...developers, newDev]);
+    try {
+      const devData = { name, logo, title, description, slug, linkText };
+      if (isEditMode && developerId) {
+        await api.updateDeveloper(developerId, devData);
+      } else {
+        await api.createDeveloper(devData);
+      }
+      navigate('/developers');
+    } catch (err) {
+      console.error(err);
     }
-
-    navigate('/developers');
   };
 
   return (
@@ -173,27 +184,67 @@ export const DeveloperForm: React.FC = () => {
               {errors.title && <p className="text-[10px] text-red-500 font-semibold">{errors.title}</p>}
             </div>
 
-            {/* Logo Link */}
+            {/* Logo S3 Upload */}
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Logo URL <span className="text-red-500">*</span></label>
-              <div className="flex gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="https://images.unsplash.com/photo..."
-                  value={logo}
-                  onChange={(e) => setLogo(e.target.value)}
-                  className={`flex-1 px-3 py-2 bg-slate-50 border ${errors.logo ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-655/20 text-xs text-slate-700 transition-all`}
-                />
-                
-                {/* Logo Preview */}
-                <div className="w-8 h-8 rounded border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {logo ? (
-                    <img src={logo} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&w=40&h=40&q=80' }} />
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-400">N/A</span>
-                  )}
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Logo Chủ Đầu Tư <span className="text-red-500">*</span></label>
+              
+              <div className="flex items-start gap-4">
+                {/* Upload zone / Preview */}
+                <div className="relative flex-1">
+                  <input
+                    type="file"
+                    id="logo-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                    disabled={isUploading}
+                  />
+                  
+                  <label
+                    htmlFor="logo-upload"
+                    className={`flex flex-col items-center justify-center border-2 border-dashed ${
+                      errors.logo || uploadError ? 'border-red-300 hover:border-red-400 bg-red-50/20' : 'border-slate-300 hover:border-indigo-500 bg-slate-50/50'
+                    } rounded-xl p-6 cursor-pointer transition-all duration-200 group text-center min-h-[140px]`}
+                  >
+                    {isUploading ? (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                        <span className="text-xs text-slate-500 font-medium">Đang tải ảnh lên S3...</span>
+                      </div>
+                    ) : logo ? (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <div className="w-16 h-16 rounded-lg border border-slate-200 bg-white p-1 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-200">
+                          <img src={logo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                        </div>
+                        <span className="text-[10px] text-indigo-600 font-bold group-hover:underline uppercase tracking-wider">Chọn ảnh khác</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <div className="p-3 bg-slate-100 rounded-full group-hover:bg-indigo-50 transition-colors duration-200">
+                          <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-600 font-semibold">Tải logo lên S3</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Hỗ trợ định dạng PNG, JPG, SVG tối đa 5MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </label>
                 </div>
+                
+                {/* Helper info / Direct URL preview */}
+                {logo && (
+                  <div className="hidden sm:block flex-1 space-y-2 text-slate-500 bg-slate-50 border border-slate-200/60 rounded-xl p-4 text-[11px] self-stretch">
+                    <p className="font-bold text-slate-600 uppercase text-[9px] tracking-wider">Thông tin tệp tin</p>
+                    <div className="break-all space-y-1">
+                      <p><span className="font-semibold">Đường dẫn S3:</span></p>
+                      <a href={logo} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline break-all block">{logo}</a>
+                    </div>
+                  </div>
+                )}
               </div>
+              
+              {uploadError && <p className="text-[10px] text-red-500 font-semibold">{uploadError}</p>}
               {errors.logo && <p className="text-[10px] text-red-500 font-semibold">{errors.logo}</p>}
             </div>
 
@@ -234,9 +285,16 @@ export const DeveloperForm: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold uppercase transition-colors cursor-pointer"
+              disabled={isUploading}
+              className={`flex items-center gap-1.5 px-4 py-2 ${
+                isUploading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
+              } text-white rounded font-bold uppercase transition-colors`}
             >
-              <Save className="w-3.5 h-3.5" />
+              {isUploading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
               <span>LƯU DỮ LIỆU</span>
             </button>
           </div>

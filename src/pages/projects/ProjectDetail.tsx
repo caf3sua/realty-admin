@@ -1,14 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
+import type { Project, Product } from '../../data/mockData';
 import { ArrowLeft, Edit, Building2, MapPin, Tag, Box } from 'lucide-react';
 
 export const ProjectDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   
-  const projects = MockDatabase.getProjects();
-  const project = projects.find(p => p.id === id);
+  const [project, setProject] = useState<Project | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!slug) return;
+    const fetchData = async () => {
+      try {
+        const proj = await api.getProject(slug);
+        setProject(proj);
+        const allProducts = await api.getProducts({ project_slug: proj.slug });
+        setProducts(allProducts);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -22,8 +49,6 @@ export const ProjectDetail: React.FC = () => {
     );
   }
 
-  // Find related products by project slug
-  const products = MockDatabase.getProducts().filter(p => p.projectSlug === project.slug);
 
   return (
     <div className="space-y-6 text-xs">
@@ -38,8 +63,8 @@ export const ProjectDetail: React.FC = () => {
         </button>
         
         <Link 
-          to={`/projects/${project.id}/edit`}
-          className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-indigo-600 hover:text-indigo-700 hover:border-slate-350 rounded font-bold uppercase transition-colors"
+          to={`/projects/${project.slug}/edit`}
+          className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-555 text-indigo-600 hover:text-indigo-700 hover:border-slate-350 rounded font-bold uppercase transition-colors"
         >
           <Edit className="w-3.5 h-3.5" />
           <span>Chỉnh sửa dự án</span>
@@ -185,7 +210,7 @@ export const ProjectDetail: React.FC = () => {
             {products.map((prod) => (
               <Link 
                 key={prod.id} 
-                to={`/products/${prod.id}`}
+                to={`/products/${prod.slug}`}
                 className="border border-slate-200 hover:border-slate-350 rounded p-3 flex gap-3 transition-all group bg-slate-50/30 hover:bg-slate-50"
               >
                 <img 

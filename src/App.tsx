@@ -65,7 +65,7 @@ function App() {
             }
           />
           <Route
-            path="/developers/:id"
+            path="/developers/:slug"
             element={
               <AuthGuard>
                 <AdminLayout>
@@ -75,7 +75,7 @@ function App() {
             }
           />
           <Route
-            path="/developers/:id/edit"
+            path="/developers/:slug/edit"
             element={
               <AuthGuard>
                 <AdminLayout>
@@ -107,7 +107,7 @@ function App() {
             }
           />
           <Route
-            path="/projects/:id"
+            path="/projects/:slug"
             element={
               <AuthGuard>
                 <AdminLayout>
@@ -117,7 +117,7 @@ function App() {
             }
           />
           <Route
-            path="/projects/:id/edit"
+            path="/projects/:slug/edit"
             element={
               <AuthGuard>
                 <AdminLayout>
@@ -149,7 +149,7 @@ function App() {
             }
           />
           <Route
-            path="/products/:id"
+            path="/products/:slug"
             element={
               <AuthGuard>
                 <AdminLayout>
@@ -159,7 +159,7 @@ function App() {
             }
           />
           <Route
-            path="/products/:id/edit"
+            path="/products/:slug/edit"
             element={
               <AuthGuard>
                 <AdminLayout>

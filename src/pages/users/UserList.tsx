@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MockDatabase } from '../../data/mockData';
+import { api } from '../../services/api';
 import type { User } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Shield, CheckCircle, Ban } from 'lucide-react';
 
 export const UserList: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState<User[]>(() => MockDatabase.getUsers());
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+
+  useEffect(() => {
+    api.getUsers()
+      .then(data => {
+        setUsers(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
 
   const handleDeleteClick = (usr: User) => {
     if (usr.id === currentUser?.id) {
@@ -20,13 +33,26 @@ export const UserList: React.FC = () => {
     setDeleteTarget(usr);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    const updated = users.filter(u => u.id !== deleteTarget.id);
-    MockDatabase.saveUsers(updated);
-    setUsers(updated);
-    setDeleteTarget(null);
+    try {
+      await api.deleteUser(deleteTarget.id);
+      setUsers(users.filter(u => u.id !== deleteTarget.id));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteTarget(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
 
   const filteredUsers = users.filter(usr => {
     const matchesSearch = usr.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
