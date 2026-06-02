@@ -140,11 +140,11 @@ export const UserDetail: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 text-xs">
+            <div className="flex items-center gap-3 p-3 bg-slate-55 border border-slate-200 text-xs">
               <Key className="w-4 h-4 text-slate-400 shrink-0" />
               <div>
-                <span className="text-[9px] text-slate-400 block font-bold uppercase">Mật khẩu (Mặc định demo)</span>
-                <span className="font-bold text-slate-700 block mt-0.5">•••••••• (dùng 'password123')</span>
+                <span className="text-[9px] text-slate-400 block font-bold uppercase">Mật khẩu</span>
+                <span className="font-bold text-slate-700 block mt-0.5">•••••••• (Đã mã hóa bảo mật)</span>
               </div>
             </div>
 

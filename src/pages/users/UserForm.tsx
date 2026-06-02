@@ -15,6 +15,7 @@ export const UserForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'staff'>('staff');
   const [status, setStatus] = useState<User['status']>('active');
+  const [password, setPassword] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -45,6 +46,12 @@ export const UserForm: React.FC = () => {
       newErrors.email = 'Email không đúng cấu trúc (ví dụ: name@realty.com)';
     }
 
+    if (!isEditMode && !password.trim()) {
+      newErrors.password = 'Mật khẩu không được để trống khi tạo mới';
+    } else if (password && password.length < 6) {
+      newErrors.password = 'Mật khẩu phải từ 6 ký tự trở lên';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -62,7 +69,14 @@ export const UserForm: React.FC = () => {
       const users = await api.getUsers();
 
       if (isEditMode && id) {
-        await api.updateUser(id, { name, email, role, status, createdAt: users.find(u => u.id === id)?.createdAt || new Date().toISOString().split('T')[0] });
+        await api.updateUser(id, { 
+          name, 
+          email, 
+          role, 
+          status, 
+          password: password || undefined,
+          createdAt: users.find(u => u.id === id)?.createdAt || new Date().toISOString().split('T')[0] 
+        });
       } else {
         const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
         if (emailExists) {
@@ -74,12 +88,14 @@ export const UserForm: React.FC = () => {
           email,
           role,
           status,
+          password,
           createdAt: new Date().toISOString().split('T')[0]
         });
       }
       navigate('/users');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrors({ email: err.message || 'Lỗi khi lưu thông tin người dùng.' });
     }
   };
 
@@ -115,7 +131,7 @@ export const UserForm: React.FC = () => {
                 placeholder="Ví dụ: Nguyễn Văn A"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.name ? 'border-red-555 focus:border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.name && <p className="text-[10px] text-red-500 font-semibold">{errors.name}</p>}
             </div>
@@ -128,9 +144,24 @@ export const UserForm: React.FC = () => {
                 placeholder="name@realty.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.email ? 'border-red-555 focus:border-red-555' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.email ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
               />
               {errors.email && <p className="text-[10px] text-red-500 font-semibold">{errors.email}</p>}
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                Mật khẩu {isEditMode ? '(Để trống nếu không muốn đổi)' : <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type="password"
+                placeholder={isEditMode ? '•••••••• (nhập mật khẩu mới nếu muốn đổi)' : '•••••••• (tối thiểu 6 ký tự)'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.password ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+              />
+              {errors.password && <p className="text-[10px] text-red-500 font-semibold">{errors.password}</p>}
             </div>
 
             {/* Role Select */}

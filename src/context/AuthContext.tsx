@@ -17,26 +17,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const savedUser = localStorage.getItem('admin_session_user');
-    if (savedUser) {
+    const token = localStorage.getItem('admin_token');
+    if (savedUser && token) {
       setUser(JSON.parse(savedUser));
+    } else {
+      // Clear inconsistent state
+      localStorage.removeItem('admin_session_user');
+      localStorage.removeItem('admin_token');
     }
     setLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const users = await api.getUsers();
-      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
-      // Allow admin@realty.com with admin123, or staff@realty.com with staff123, or any existing active user with password123 for testing
-      if (foundUser && foundUser.status === 'active') {
-        const isPasswordCorrect = password === 'admin123' || password === 'staff123' || password === 'password123';
-        if (isPasswordCorrect) {
-          setUser(foundUser);
-          localStorage.setItem('admin_session_user', JSON.stringify(foundUser));
-          return true;
-        }
-      }
+      const data = await api.login(email, password);
+      setUser(data.user);
+      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_session_user', JSON.stringify(data.user));
+      return true;
     } catch (err) {
       console.error(err);
     }
@@ -45,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_session_user');
   };
 
@@ -57,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
