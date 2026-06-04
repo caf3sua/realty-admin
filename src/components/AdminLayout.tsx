@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Building2, 
-  Layers, 
-  Home, 
-  Users, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Building2,
+  Layers,
+  Home,
+  Users,
+  LogOut,
+  Menu,
   X,
   ChevronRight
 } from 'lucide-react';
@@ -26,11 +26,10 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, active, onCl
     <Link
       to={to}
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-3 border-l-2 transition-all duration-150 group ${
-        active 
-          ? 'bg-indigo-50/70 border-indigo-600 text-indigo-600 font-semibold' 
-          : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-      }`}
+      className={`flex items-center gap-3 px-4 py-3 border-l-2 transition-all duration-150 group ${active
+        ? 'bg-indigo-50/70 border-indigo-600 text-indigo-600 font-semibold'
+        : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+        }`}
     >
       <span className={`transition-transform duration-150 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
         {icon}
@@ -74,11 +73,12 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     <div className="min-h-screen bg-slate-50 flex text-slate-800">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-60 bg-white border-r border-slate-200/80 p-0 shrink-0">
-        {/* Brand Logo */}
         <div className="flex items-center gap-2.5 px-6 py-5 border-b border-slate-100">
-          <div className="w-7 h-7 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
-            R
-          </div>
+          <img
+            src="/image/logo-blue.png"
+            alt="Logo"
+            className="h-7 w-auto object-contain"
+          />
           <div>
             <h1 className="font-bold text-slate-900 text-sm leading-none">Realty Admin</h1>
             <span className="text-[9px] text-slate-400 font-semibold tracking-widest uppercase mt-0.5 block">Portal Quản Lý</span>
@@ -94,8 +94,8 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
               icon={item.icon}
               label={item.label}
               active={
-                item.to === '/' 
-                  ? location.pathname === '/' 
+                item.to === '/'
+                  ? location.pathname === '/'
                   : location.pathname.startsWith(item.to)
               }
             />
@@ -127,7 +127,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex animate-fade-in">
           {/* Backdrop overlay */}
-          <div 
+          <div
             className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs"
             onClick={() => setMobileMenuOpen(false)}
           />
@@ -135,19 +135,21 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
           <div className="relative w-60 bg-white h-full flex flex-col p-0 border-r border-slate-200/80 animate-in slide-in-from-left duration-200">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-                  R
-                </div>
+                <img
+                  src="/image/logo-blue.png"
+                  alt="Logo"
+                  className="h-7 w-auto object-contain"
+                />
                 <h1 className="font-bold text-slate-900 text-sm">Realty Admin</h1>
               </div>
-              <button 
+              <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-1 rounded text-slate-400 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             <nav className="flex-1 space-y-0.5">
               {navigation.map((item) => (
                 <SidebarItem
@@ -156,8 +158,8 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                   icon={item.icon}
                   label={item.label}
                   active={
-                    item.to === '/' 
-                      ? location.pathname === '/' 
+                    item.to === '/'
+                      ? location.pathname === '/'
                       : location.pathname.startsWith(item.to)
                   }
                   onClick={() => setMobileMenuOpen(false)}
@@ -200,7 +202,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
             </button>
             <h2 className="font-bold text-slate-800 text-sm tracking-wide truncate">{getPageTitle()}</h2>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* System Status Pulse Dot */}
             <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-200/50 rounded-lg">
