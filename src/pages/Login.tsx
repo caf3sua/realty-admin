@@ -46,9 +46,11 @@ export const Login: React.FC = () => {
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-500 rounded-full mix-blend-multiply filter blur-2xl opacity-20 -translate-x-20 translate-y-20"></div>
 
           <div className="flex items-center gap-2 z-10">
-            <div className="w-8 h-8 rounded bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20 font-bold text-lg">
-              R
-            </div>
+            <img
+              src="/image/logo-yellow.png"
+              alt="Logo"
+              className="h-8 w-auto object-contain"
+            />
             <span className="font-bold text-sm tracking-widest uppercase">REALTY PORTAL</span>
           </div>
 
@@ -59,11 +61,6 @@ export const Login: React.FC = () => {
             <p className="text-indigo-100 text-xs leading-relaxed max-w-sm">
               Quản lý danh sách chủ đầu tư, dự án, danh mục sản phẩm căn hộ và nhân viên phân quyền nội bộ của Ánh Dương Property.
             </p>
-            <div className="text-[10px] text-indigo-200/80 bg-white/10 border border-white/20 p-3 rounded">
-              Status: ACTIVE<br/>
-              Version: 1.0.0 (light)<br/>
-              Driver: localstorage_db
-            </div>
           </div>
 
           <div className="text-[10px] text-indigo-200 z-10">
@@ -146,23 +143,6 @@ export const Login: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* Quick Login Info */}
-          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-            <span className="text-[10px] text-slate-450 font-bold block mb-2.5 uppercase tracking-widest">Tài khoản demo</span>
-            <div className="grid grid-cols-2 gap-2 text-[9px] text-slate-500">
-              <div className="bg-slate-50 border border-slate-200/80 rounded p-2 text-left">
-                <strong className="text-slate-800 block text-[10px] uppercase mb-0.5">Admin</strong>
-                Email: admin@realty.com<br/>
-                Mật khẩu: admin123
-              </div>
-              <div className="bg-slate-50 border border-slate-200/80 rounded p-2 text-left">
-                <strong className="text-slate-800 block text-[10px] uppercase mb-0.5">Staff</strong>
-                Email: staff@realty.com<br/>
-                Mật khẩu: staff123
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

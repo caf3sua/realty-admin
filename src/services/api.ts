@@ -1,6 +1,6 @@
 import type { Developer, Project, Product, User, Post } from '../data/mockData';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // Helper to strip ID from data for API requests
 const stripId = (data: any): any => {
