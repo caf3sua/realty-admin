@@ -55,6 +55,38 @@ export interface User {
   createdAt: string;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  code: string;
+  phone: string;
+  classification: string;
+  address?: string;
+  email?: string;
+  source: string;
+  needs?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface Advisory {
+  id: string;
+  name: string;
+  phone: string;
+  details: string;
+  productSlug?: string;
+  productName?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface Newsletter {
+  id: string;
+  email: string;
+  createdAt: string;
+  active: boolean;
+}
+
 // Initial Mock Developers
 export const mockDevelopers: Developer[] = [
   {

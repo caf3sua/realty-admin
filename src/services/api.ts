@@ -1,4 +1,4 @@
-import type { Developer, Project, Product, User } from '../data/mockData';
+import type { Developer, Project, Product, User, Customer, Advisory, Newsletter } from '../data/mockData';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -243,5 +243,148 @@ export const api = {
       throw new Error(errData.detail || 'Failed to upload file');
     }
     return res.json();
+  },
+
+  // CRM - Customers (Khách hàng)
+  async getCustomers(params?: { search?: string; classification?: string; source?: string }): Promise<Customer[]> {
+    const query = new URLSearchParams();
+    if (params) {
+      if (params.search) query.append('search', params.search);
+      if (params.classification) query.append('classification', params.classification);
+      if (params.source) query.append('source', params.source);
+    }
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/crm/customers${queryString}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Không thể tải danh sách khách hàng');
+    return res.json();
+  },
+
+  async getCustomer(id: string): Promise<Customer> {
+    const res = await fetch(`${API_BASE_URL}/crm/customers/${id}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(`Không thể tải thông tin khách hàng với ID ${id}`);
+    return res.json();
+  },
+
+  async createCustomer(data: Omit<Customer, 'id' | 'createdAt'> & { id?: string }): Promise<Customer> {
+    const res = await fetch(`${API_BASE_URL}/crm/customers`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify(stripId(data)),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Không thể tạo khách hàng mới');
+    }
+    return res.json();
+  },
+
+  async updateCustomer(id: string, data: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
+    const res = await fetch(`${API_BASE_URL}/crm/customers/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify(stripId(data)),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Không thể cập nhật khách hàng ${id}`);
+    }
+    return res.json();
+  },
+
+  async deleteCustomer(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/crm/customers/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Không thể xóa khách hàng ${id}`);
+  },
+
+  // CRM - Advisories (Yêu cầu tư vấn)
+  async getAdvisories(params?: { search?: string; status?: string }): Promise<Advisory[]> {
+    const query = new URLSearchParams();
+    if (params) {
+      if (params.search) query.append('search', params.search);
+      if (params.status) query.append('status_filter', params.status);
+    }
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/crm/advisories${queryString}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Không thể tải danh sách yêu cầu tư vấn');
+    return res.json();
+  },
+
+  async getAdvisory(id: string): Promise<Advisory> {
+    const res = await fetch(`${API_BASE_URL}/crm/advisories/${id}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(`Không thể tải yêu cầu tư vấn với ID ${id}`);
+    return res.json();
+  },
+
+  // Advisory creation is public (no authentication required)
+  async createAdvisory(data: Omit<Advisory, 'id' | 'createdAt' | 'status'> & { status?: string }): Promise<Advisory> {
+    const res = await fetch(`${API_BASE_URL}/crm/advisories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Không thể gửi yêu cầu tư vấn');
+    return res.json();
+  },
+
+  async updateAdvisoryStatus(id: string, status: string): Promise<Advisory> {
+    const res = await fetch(`${API_BASE_URL}/crm/advisories/${id}?status_update=${encodeURIComponent(status)}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Không thể cập nhật trạng thái yêu cầu tư vấn ${id}`);
+    return res.json();
+  },
+
+  async deleteAdvisory(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/crm/advisories/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Không thể xóa yêu cầu tư vấn ${id}`);
+  },
+
+  // CRM - Newsletters (Đăng ký nhận tin tức)
+  async getNewsletters(active?: boolean): Promise<Newsletter[]> {
+    const query = new URLSearchParams();
+    if (active !== undefined) query.append('active', String(active));
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    
+    const res = await fetch(`${API_BASE_URL}/crm/newsletters${queryString}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Không thể tải danh sách đăng ký nhận tin');
+    return res.json();
+  },
+
+  // Newsletter subscription is public (no authentication required)
+  async subscribeNewsletter(email: string): Promise<Newsletter> {
+    const res = await fetch(`${API_BASE_URL}/crm/newsletters`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Không thể đăng ký nhận tin tức');
+    }
+    return res.json();
+  },
+
+  async toggleNewsletterActive(id: string, active: boolean): Promise<Newsletter> {
+    const res = await fetch(`${API_BASE_URL}/crm/newsletters/${id}?active=${active}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Không thể cập nhật trạng thái đăng ký ${id}`);
+    return res.json();
+  },
+
+  async deleteNewsletter(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/crm/newsletters/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Không thể xóa đăng ký ${id}`);
   },
 };

@@ -23,6 +23,12 @@ import { UserList } from './pages/users/UserList';
 import { UserDetail } from './pages/users/UserDetail';
 import { UserForm } from './pages/users/UserForm';
 
+import { CustomerList } from './pages/crm/CustomerList';
+import { CustomerForm } from './pages/crm/CustomerForm';
+import { CustomerDetail } from './pages/crm/CustomerDetail';
+import { AdvisoryList } from './pages/crm/AdvisoryList';
+import { NewsletterList } from './pages/crm/NewsletterList';
+
 function App() {
   return (
     <AuthProvider>
@@ -206,6 +212,68 @@ function App() {
               <AuthGuard>
                 <AdminLayout>
                   <UserForm />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+
+          {/* CRM CRUD */}
+          <Route
+            path="/crm/customers"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <CustomerList />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/crm/customers/new"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <CustomerForm />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/crm/customers/:id"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <CustomerDetail />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/crm/customers/:id/edit"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <CustomerForm />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/crm/advisories"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <AdvisoryList />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/crm/newsletters"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <NewsletterList />
                 </AdminLayout>
               </AuthGuard>
             }

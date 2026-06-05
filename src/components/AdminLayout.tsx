@@ -10,7 +10,8 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -46,6 +47,15 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isCrmPath = location.pathname.startsWith('/crm');
+  const [crmOpen, setCrmOpen] = useState(isCrmPath);
+
+  React.useEffect(() => {
+    if (location.pathname.startsWith('/crm')) {
+      setCrmOpen(true);
+    }
+  }, [location.pathname]);
+
   const navigation = [
     { to: '/', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Dashboard' },
     { to: '/developers', icon: <Building2 className="w-4 h-4" />, label: 'Chủ Đầu Tư' },
@@ -66,6 +76,9 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     if (path.startsWith('/projects')) return 'Quản lý Dự Án';
     if (path.startsWith('/products')) return 'Quản lý Sản Phẩm Bất Động Sản';
     if (path.startsWith('/users')) return 'Quản lý Người Dùng';
+    if (path.startsWith('/crm/customers')) return 'CRM - Quản lý Khách Hàng';
+    if (path.startsWith('/crm/advisories')) return 'CRM - Yêu cầu tư vấn';
+    if (path.startsWith('/crm/newsletters')) return 'CRM - Đăng ký nhận tin tức';
     return 'Realty Admin';
   };
 
@@ -100,6 +113,61 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
               }
             />
           ))}
+
+          {/* CRM Collapsible Menu */}
+          <div className="space-y-0.5">
+            <button
+              onClick={() => setCrmOpen(!crmOpen)}
+              className={`flex items-center gap-3 w-full text-left px-4 py-3 border-l-2 transition-all duration-150 group cursor-pointer ${
+                isCrmPath
+                  ? 'bg-indigo-50/70 border-indigo-600 text-indigo-600 font-semibold'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <span className={`transition-transform duration-150 ${isCrmPath ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                <Users className="w-4 h-4" />
+              </span>
+              <span className="text-sm font-medium">CRM</span>
+              <span className="ml-auto">
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${crmOpen ? 'rotate-180' : ''}`} />
+              </span>
+            </button>
+
+            {crmOpen && (
+              <div className="bg-slate-50/50 border-y border-slate-100">
+                <Link
+                  to="/crm/customers"
+                  className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${
+                    location.pathname.startsWith('/crm/customers')
+                      ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                      : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="text-[11px] font-medium">Khách hàng</span>
+                </Link>
+                <Link
+                  to="/crm/advisories"
+                  className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${
+                    location.pathname.startsWith('/crm/advisories')
+                      ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                      : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="text-[11px] font-medium">Tư vấn</span>
+                </Link>
+                <Link
+                  to="/crm/newsletters"
+                  className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${
+                    location.pathname.startsWith('/crm/newsletters')
+                      ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                      : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="text-[11px] font-medium">Đăng ký nhận tin tức</span>
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* User Profile & Logout at Bottom */}
@@ -165,6 +233,64 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                   onClick={() => setMobileMenuOpen(false)}
                 />
               ))}
+
+              {/* CRM Collapsible Menu for Mobile */}
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => setCrmOpen(!crmOpen)}
+                  className={`flex items-center gap-3 w-full text-left px-4 py-3 border-l-2 transition-all duration-150 group cursor-pointer ${
+                    isCrmPath
+                      ? 'bg-indigo-50/70 border-indigo-600 text-indigo-600 font-semibold'
+                      : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <span className={`transition-transform duration-150 ${isCrmPath ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                    <Users className="w-4 h-4" />
+                  </span>
+                  <span className="text-sm font-medium">CRM</span>
+                  <span className="ml-auto">
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${crmOpen ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+
+                {crmOpen && (
+                  <div className="bg-slate-50/50 border-y border-slate-100">
+                    <Link
+                      to="/crm/customers"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${
+                        location.pathname.startsWith('/crm/customers')
+                          ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                          : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[11px] font-medium">Khách hàng</span>
+                    </Link>
+                    <Link
+                      to="/crm/advisories"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${
+                        location.pathname.startsWith('/crm/advisories')
+                          ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                          : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[11px] font-medium">Tư vấn</span>
+                    </Link>
+                    <Link
+                      to="/crm/newsletters"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${
+                        location.pathname.startsWith('/crm/newsletters')
+                          ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                          : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[11px] font-medium">Đăng ký nhận tin tức</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </nav>
 
             <div className="border-t border-slate-100 p-4 mt-auto">
