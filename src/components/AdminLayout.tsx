@@ -10,7 +10,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  ChevronRight
+  ChevronRight,
+  Newspaper
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -52,6 +53,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     { to: '/developers', icon: <Building2 className="w-4 h-4" />, label: 'Chủ Đầu Tư' },
     { to: '/projects', icon: <Layers className="w-4 h-4" />, label: 'Dự Án' },
     { to: '/products', icon: <Home className="w-4 h-4" />, label: 'Sản Phẩm BĐS' },
+    { to: '/posts', icon: <Newspaper className="w-4 h-4" />, label: 'Bài Viết' },
     { to: '/users', icon: <Users className="w-4 h-4" />, label: 'Người Dùng' },
   ];
 
@@ -66,6 +68,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     if (path.startsWith('/developers')) return 'Quản lý Chủ Đầu Tư';
     if (path.startsWith('/projects')) return 'Quản lý Dự Án';
     if (path.startsWith('/products')) return 'Quản lý Sản Phẩm Bất Động Sản';
+    if (path.startsWith('/posts')) return 'Quản lý Bài Viết';
     if (path.startsWith('/users')) return 'Quản lý Người Dùng';
     return 'Realty Admin';
   };

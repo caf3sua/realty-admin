@@ -1,4 +1,4 @@
-import type { Developer, Project, Product, User } from '../data/mockData';
+import type { Developer, Project, Product, User, Post } from '../data/mockData';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -220,6 +220,47 @@ export const api = {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.detail || `Failed to delete user ${id}`);
     }
+  },
+
+  // Posts
+  async getPosts(): Promise<Post[]> {
+    const res = await fetch(`${API_BASE_URL}/posts`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch posts');
+    return res.json();
+  },
+
+  async getPost(slug: string): Promise<Post> {
+    const res = await fetch(`${API_BASE_URL}/posts/${slug}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(`Failed to fetch post with slug ${slug}`);
+    return res.json();
+  },
+
+  async createPost(data: Omit<Post, 'id'> & { id?: string }): Promise<Post> {
+    const res = await fetch(`${API_BASE_URL}/posts`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify(stripId(data)),
+    });
+    if (!res.ok) throw new Error('Failed to create post');
+    return res.json();
+  },
+
+  async updatePost(id: string, data: Omit<Post, 'id'>): Promise<Post> {
+    const res = await fetch(`${API_BASE_URL}/posts/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify(stripId(data)),
+    });
+    if (!res.ok) throw new Error(`Failed to update post ${id}`);
+    return res.json();
+  },
+
+  async deletePost(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/posts/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to delete post ${id}`);
   },
 
   // File Upload

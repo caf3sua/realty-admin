@@ -23,6 +23,10 @@ import { UserList } from './pages/users/UserList';
 import { UserDetail } from './pages/users/UserDetail';
 import { UserForm } from './pages/users/UserForm';
 
+import { PostList } from './pages/posts/PostList';
+import { PostDetail } from './pages/posts/PostDetail';
+import { PostForm } from './pages/posts/PostForm';
+
 function App() {
   return (
     <AuthProvider>
@@ -164,6 +168,48 @@ function App() {
               <AuthGuard>
                 <AdminLayout>
                   <ProductForm />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+
+          {/* Posts CRUD */}
+          <Route
+            path="/posts"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostList />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/posts/new"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostForm />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/posts/:slug"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostDetail />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/posts/:slug/edit"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostForm />
                 </AdminLayout>
               </AuthGuard>
             }
