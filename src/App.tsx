@@ -28,6 +28,9 @@ import { CustomerForm } from './pages/crm/CustomerForm';
 import { CustomerDetail } from './pages/crm/CustomerDetail';
 import { AdvisoryList } from './pages/crm/AdvisoryList';
 import { NewsletterList } from './pages/crm/NewsletterList';
+import { PostList } from './pages/posts/PostList';
+import { PostDetail } from './pages/posts/PostDetail';
+import { PostForm } from './pages/posts/PostForm';
 
 function App() {
   return (
@@ -170,6 +173,48 @@ function App() {
               <AuthGuard>
                 <AdminLayout>
                   <ProductForm />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+
+          {/* Posts CRUD */}
+          <Route
+            path="/posts"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostList />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/posts/new"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostForm />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/posts/:slug"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostDetail />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/posts/:slug/edit"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <PostForm />
                 </AdminLayout>
               </AuthGuard>
             }

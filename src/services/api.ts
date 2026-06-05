@@ -1,4 +1,4 @@
-import type { Developer, Project, Product, User, Customer, Advisory, Newsletter } from '../data/mockData';
+import type { Post, Developer, Project, Product, User, Customer, Advisory, Newsletter } from '../data/mockData';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -222,17 +222,58 @@ export const api = {
     }
   },
 
+  // Posts
+  async getPosts(): Promise<Post[]> {
+    const res = await fetch(`${API_BASE_URL}/posts`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch posts');
+    return res.json();
+  },
+
+  async getPost(slug: string): Promise<Post> {
+    const res = await fetch(`${API_BASE_URL}/posts/${slug}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(`Failed to fetch post with slug ${slug}`);
+    return res.json();
+  },
+
+  async createPost(data: Omit<Post, 'id'> & { id?: string }): Promise<Post> {
+    const res = await fetch(`${API_BASE_URL}/posts`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify(stripId(data)),
+    });
+    if (!res.ok) throw new Error('Failed to create post');
+    return res.json();
+  },
+
+  async updatePost(id: string, data: Omit<Post, 'id'>): Promise<Post> {
+    const res = await fetch(`${API_BASE_URL}/posts/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify(stripId(data)),
+    });
+    if (!res.ok) throw new Error(`Failed to update post ${id}`);
+    return res.json();
+  },
+
+  async deletePost(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/posts/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to delete post ${id}`);
+  },
+
   // File Upload
   async uploadFile(file: File): Promise<{ url: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     const headers: Record<string, string> = {};
     const token = localStorage.getItem('admin_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     const res = await fetch(`${API_BASE_URL}/upload`, {
       method: 'POST',
       headers,
@@ -351,7 +392,7 @@ export const api = {
     const query = new URLSearchParams();
     if (active !== undefined) query.append('active', String(active));
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    
+
     const res = await fetch(`${API_BASE_URL}/crm/newsletters${queryString}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Không thể tải danh sách đăng ký nhận tin');
     return res.json();
