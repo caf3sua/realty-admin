@@ -5,6 +5,7 @@ import type { User } from '../data/mockData';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: (token: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
 }
@@ -41,6 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  const loginWithGoogle = async (token: string): Promise<boolean> => {
+    try {
+      const data = await api.loginWithGoogle(token);
+      setUser(data.user);
+      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_session_user', JSON.stringify(data.user));
+      return true;
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('admin_token');
@@ -48,11 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

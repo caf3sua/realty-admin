@@ -36,6 +36,20 @@ export const api = {
     return res.json();
   },
 
+  async loginWithGoogle(token: string): Promise<{ token: string; user: User }> {
+    const res = await fetch(`${API_BASE_URL}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Đăng nhập bằng tài khoản Google thất bại');
+    }
+    return res.json();
+  },
+
+
   // Developers
   async getDevelopers(): Promise<Developer[]> {
     const res = await fetch(`${API_BASE_URL}/developers`, { headers: getHeaders() });

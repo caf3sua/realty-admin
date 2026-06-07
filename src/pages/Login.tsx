@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   
   const [email, setEmail] = useState('');
@@ -12,6 +18,88 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Initialise Google sign-in if script is already loaded
+    if (window.google?.accounts?.id) {
+      initializeGoogleSignIn();
+      return;
+    }
+
+    // Load Google Identity Services script
+    const script = document.createElement('script');
+    script.id = 'google-gsi-client';
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      initializeGoogleSignIn();
+    };
+    script.onerror = () => {
+      console.error('Không thể tải thư viện Google Sign-in.');
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      // Keep script loaded to avoid re-fetching on navigation, but clean up button container if needed
+    };
+  }, []);
+
+  const initializeGoogleSignIn = () => {
+    try {
+      if (window.google?.accounts?.id) {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCallback,
+          auto_select: false,
+        });
+
+        const btnElement = document.getElementById('google-signin-btn');
+        if (btnElement) {
+          window.google.accounts.id.renderButton(btnElement, {
+            theme: 'outline',
+            size: 'large',
+            width: btnElement.clientWidth || 320,
+            text: 'signin_with',
+            shape: 'rectangular',
+            logo_alignment: 'left',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi khởi tạo Google Sign-in:', err);
+    }
+  };
+
+  // Handle window resize to re-render button with proper width
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.google?.accounts?.id) {
+        initializeGoogleSignIn();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleGoogleCallback = async (response: any) => {
+    setError('');
+    setLoading(true);
+    try {
+      const success = await loginWithGoogle(response.credential);
+      if (success) {
+        navigate('/');
+      } else {
+        setError('Tài khoản Google này chưa được cấp quyền truy cập hệ thống.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Có lỗi xảy ra khi đăng nhập bằng Google.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +126,7 @@ export const Login: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       {/* Container */}
-      <div className="bg-white rounded-2xl overflow-hidden shadow-xl w-full max-w-4xl flex min-h-[500px] border border-slate-200/80">
+      <div className="bg-white rounded-2xl overflow-hidden shadow-xl w-full max-w-4xl flex min-h-[520px] border border-slate-200/80">
         
         {/* Left Side: Branding */}
         <div className="hidden md:flex md:w-1/2 bg-gradient-to-tr from-indigo-700 via-indigo-600 to-violet-600 p-12 flex-col justify-between text-white relative overflow-hidden">
@@ -76,7 +164,7 @@ export const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-650 text-xs rounded">
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded">
               {error}
             </div>
           )}
@@ -84,7 +172,7 @@ export const Login: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email field */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider">Địa chỉ Email</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Địa chỉ Email</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
@@ -100,7 +188,7 @@ export const Login: React.FC = () => {
 
             {/* Password field */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider">Mật khẩu</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mật khẩu</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
@@ -124,7 +212,7 @@ export const Login: React.FC = () => {
             {/* Remember & Forgot */}
             <div className="flex items-center justify-between text-xs pt-1">
               <label className="flex items-center gap-2 text-slate-500 cursor-pointer">
-                <input type="checkbox" className="rounded border-slate-350 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer" />
+                <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer" />
                 <span>Ghi nhớ phiên</span>
               </label>
               <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-700">Quên mật khẩu?</a>
@@ -142,9 +230,25 @@ export const Login: React.FC = () => {
                 'ĐĂNG NHẬP'
               )}
             </button>
+
+            {/* Divider */}
+            <div className="relative flex items-center justify-center my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <span className="relative px-3 bg-white text-[10px] font-bold text-slate-450 uppercase tracking-widest z-10">
+                Hoặc
+              </span>
+            </div>
+
+            {/* Google Sign-In Button Container */}
+            <div className="w-full flex justify-center">
+              <div id="google-signin-btn" className="w-full flex justify-center min-h-[40px] hover:opacity-95 transition-opacity duration-150"></div>
+            </div>
           </form>
         </div>
       </div>
     </div>
   );
 };
+

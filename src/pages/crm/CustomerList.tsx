@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Customer } from '../../data/mockData';
-import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Filter, UserCheck } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, AlertTriangle } from 'lucide-react';
 
 export const CustomerList: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
