@@ -97,11 +97,12 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         <div className="flex items-center gap-1.5 ml-auto">
           {selectedIds.length > 0 && (
             <>
-              <X 
-                className="w-4 h-4 text-slate-400 hover:text-slate-600 cursor-pointer" 
-                onClick={clearAll}
-                title="Xóa tất cả"
-              />
+              <span title="Xóa tất cả" className="flex items-center">
+                <X 
+                  className="w-4 h-4 text-slate-400 hover:text-slate-600 cursor-pointer" 
+                  onClick={clearAll}
+                />
+              </span>
               <div className="w-px h-4 bg-slate-200"></div>
             </>
           )}

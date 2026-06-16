@@ -241,10 +241,13 @@ export const ProductForm: React.FC = () => {
       legal,
       handoverCondition,
       paymentMethod,
-      amenities: selectedAmenities.map(id => {
+      amenities: selectedAmenities.reduce((acc, id) => {
         const found = amenitiesList.find(a => a.id === id);
-        return found ? { id: found.id, name: found.name, icon: found.icon } : null;
-      }).filter(Boolean)
+        if (found) {
+          acc.push({ id: found.id, name: found.name, icon: found.icon });
+        }
+        return acc;
+      }, [] as { id: string; name: string; icon?: string }[])
     };
 
     try {
