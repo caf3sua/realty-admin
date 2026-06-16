@@ -1,3 +1,13 @@
+export interface Amenity {
+  id: string;
+  name: string;
+  product_type: 'all' | 'apartment' | 'villa' | 'townhouse' | 'shophouse';
+  icon?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -29,11 +39,15 @@ export interface Product {
   productType: 'villa' | 'townhouse' | 'apartment' | 'residential' | 'shophouse';
   productTypeName: string;
   isPremium: boolean;
+  isHot?: boolean;
   developer?: string;
   images: string[];
   status: 'Còn hàng' | 'Đã cọc' | 'Đã bán' | 'Đang bán' | 'Sắp mở bán';
   direction: string;
   legal: string;
+  handoverCondition?: string;
+  paymentMethod?: string;
+  amenities?: { id: string; name: string; icon?: string; }[];
 }
 
 export interface Developer {

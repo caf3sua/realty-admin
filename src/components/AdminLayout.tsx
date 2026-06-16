@@ -12,7 +12,8 @@ import {
   X,
   ChevronRight,
   ChevronDown,
-  Newspaper
+  Newspaper,
+  Settings
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -51,9 +52,15 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   const isCrmPath = location.pathname.startsWith('/crm');
   const [crmOpen, setCrmOpen] = useState(isCrmPath);
 
+  const isConfigPath = location.pathname.startsWith('/config');
+  const [configOpen, setConfigOpen] = useState(isConfigPath);
+
   React.useEffect(() => {
     if (location.pathname.startsWith('/crm')) {
       setCrmOpen(true);
+    }
+    if (location.pathname.startsWith('/config')) {
+      setConfigOpen(true);
     }
   }, [location.pathname]);
 
@@ -82,6 +89,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     if (path.startsWith('/crm/customers')) return 'CRM - Quản lý Khách Hàng';
     if (path.startsWith('/crm/advisories')) return 'CRM - Yêu cầu tư vấn';
     if (path.startsWith('/crm/newsletters')) return 'CRM - Đăng ký nhận tin tức';
+    if (path.startsWith('/config/amenities')) return 'Cấu hình - Quản lý Tiện ích';
     return 'Realty Admin';
   };
 
@@ -163,6 +171,39 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                     }`}
                 >
                   <span className="text-[11px] font-medium">Đăng ký nhận tin tức</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Config Collapsible Menu */}
+          <div className="space-y-0.5">
+            <button
+              onClick={() => setConfigOpen(!configOpen)}
+              className={`flex items-center gap-3 w-full text-left px-4 py-3 border-l-2 transition-all duration-150 group cursor-pointer ${isConfigPath
+                  ? 'bg-indigo-50/70 border-indigo-600 text-indigo-600 font-semibold'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+            >
+              <span className={`transition-transform duration-150 ${isConfigPath ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                <Settings className="w-4 h-4" />
+              </span>
+              <span className="text-sm font-medium">Cấu hình</span>
+              <span className="ml-auto">
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${configOpen ? 'rotate-180' : ''}`} />
+              </span>
+            </button>
+
+            {configOpen && (
+              <div className="bg-slate-50/50 border-y border-slate-100">
+                <Link
+                  to="/config/amenities"
+                  className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${location.pathname.startsWith('/config/amenities')
+                      ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                      : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                >
+                  <span className="text-[11px] font-medium">Tiện ích</span>
                 </Link>
               </div>
             )}
@@ -282,6 +323,40 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                         }`}
                     >
                       <span className="text-[11px] font-medium">Đăng ký nhận tin tức</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Config Collapsible Menu for Mobile */}
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => setConfigOpen(!configOpen)}
+                  className={`flex items-center gap-3 w-full text-left px-4 py-3 border-l-2 transition-all duration-150 group cursor-pointer ${isConfigPath
+                      ? 'bg-indigo-50/70 border-indigo-600 text-indigo-600 font-semibold'
+                      : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                >
+                  <span className={`transition-transform duration-150 ${isConfigPath ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                    <Settings className="w-4 h-4" />
+                  </span>
+                  <span className="text-sm font-medium">Cấu hình</span>
+                  <span className="ml-auto">
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${configOpen ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+
+                {configOpen && (
+                  <div className="bg-slate-50/50 border-y border-slate-100">
+                    <Link
+                      to="/config/amenities"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 pl-11 pr-4 py-2.5 transition-all duration-150 border-l-2 ${location.pathname.startsWith('/config/amenities')
+                          ? 'border-indigo-600 text-indigo-600 font-semibold bg-indigo-50/30'
+                          : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                        }`}
+                    >
+                      <span className="text-[11px] font-medium">Tiện ích</span>
                     </Link>
                   </div>
                 )}

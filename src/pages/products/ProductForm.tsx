@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
-import type { Product, Project, Developer } from '../../data/mockData';
+import type { Product, Project, Developer, Amenity } from '../../data/mockData';
+import { MultiSelect } from '../../components/MultiSelect';
 import { ArrowLeft, Save, Sparkles, Upload, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const convertToSlug = (text: string) => {
@@ -39,6 +40,7 @@ export const ProductForm: React.FC = () => {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [amenitiesList, setAmenitiesList] = useState<Amenity[]>([]);
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -51,6 +53,7 @@ export const ProductForm: React.FC = () => {
   const [projectSlug, setProjectSlug] = useState('ngoai-du-an');
   const [productType, setProductType] = useState<Product['productType']>('villa');
   const [isPremium, setIsPremium] = useState(false);
+  const [isHot, setIsHot] = useState(false);
   const [developer, setDeveloper] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -59,18 +62,23 @@ export const ProductForm: React.FC = () => {
   const [status, setStatus] = useState<Product['status']>('Còn hàng');
   const [direction, setDirection] = useState('Đông Nam');
   const [legal, setLegal] = useState('Sổ đỏ lâu dài');
+  const [handoverCondition, setHandoverCondition] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const [projs, devs] = await Promise.all([
+        const [projs, devs, ams] = await Promise.all([
           api.getProjects(),
-          api.getDevelopers()
+          api.getDevelopers(),
+          api.getAmenities()
         ]);
         setProjects(projs);
         setDevelopers(devs);
+        setAmenitiesList(ams.filter(a => a.is_active));
 
         if (isEditMode && routeSlug) {
           const prod = await api.getProduct(routeSlug);
@@ -86,11 +94,15 @@ export const ProductForm: React.FC = () => {
           setProjectSlug(prod.projectSlug);
           setProductType(prod.productType);
           setIsPremium(prod.isPremium);
+          setIsHot(prod.isHot || false);
           setDeveloper(prod.developer || '');
           setImages(prod.images || []);
           setStatus(prod.status);
           setDirection(prod.direction);
           setLegal(prod.legal);
+          setHandoverCondition(prod.handoverCondition || '');
+          setPaymentMethod(prod.paymentMethod || '');
+          setSelectedAmenities((prod.amenities || []).map((a: any) => typeof a === 'string' ? a : a.id));
         } else {
           const randomPic = defaultUnsplashPics[Math.floor(Math.random() * defaultUnsplashPics.length)];
           setImages([randomPic]);
@@ -221,11 +233,18 @@ export const ProductForm: React.FC = () => {
       productType,
       productTypeName,
       isPremium,
+      isHot,
       developer: developer || undefined,
       images,
       status,
       direction,
-      legal
+      legal,
+      handoverCondition,
+      paymentMethod,
+      amenities: selectedAmenities.map(id => {
+        const found = amenitiesList.find(a => a.id === id);
+        return found ? { id: found.id, name: found.name, icon: found.icon } : null;
+      }).filter(Boolean)
     };
 
     try {
@@ -435,8 +454,32 @@ export const ProductForm: React.FC = () => {
               />
             </div>
 
-            {/* Premium product checkbox */}
-            <div className="space-y-1.5 flex items-center pt-6">
+            {/* Handover Condition */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tình trạng bàn giao</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Bàn giao thô, Hoàn thiện cơ bản"
+                value={handoverCondition}
+                onChange={(e) => setHandoverCondition(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-600 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all"
+              />
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Phương thức thanh toán</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Thanh toán theo tiến độ, Vay 70%"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-600 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all"
+              />
+            </div>
+
+            {/* Premium & New product checkboxes */}
+            <div className="space-y-1.5 flex flex-wrap items-center pt-6 gap-6 md:col-span-3">
               <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-500 uppercase text-[9px] tracking-wider">
                 <input
                   type="checkbox"
@@ -446,6 +489,27 @@ export const ProductForm: React.FC = () => {
                 />
                 <span>Căn hộ Cao Cấp (Premium)</span>
               </label>
+
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-500 uppercase text-[9px] tracking-wider">
+                <input
+                  type="checkbox"
+                  checked={isHot}
+                  onChange={(e) => setIsHot(e.target.checked)}
+                  className="rounded border-slate-300 text-rose-600 focus:ring-rose-600/20 w-3.5 h-3.5 cursor-pointer"
+                />
+                <span className="text-rose-600">Sản phẩm hot</span>
+              </label>
+            </div>
+
+            {/* Amenities Multiselect */}
+            <div className="space-y-1.5 md:col-span-3 pt-6 border-t border-slate-100">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tiện ích đi kèm</label>
+              <MultiSelect 
+                options={amenitiesList.filter(a => a.product_type === 'all' || a.product_type === productType).map(a => ({ id: a.id, name: a.name, icon: a.icon }))}
+                selectedIds={selectedAmenities}
+                onChange={setSelectedAmenities}
+                placeholder="Tìm và chọn các tiện ích phù hợp..."
+              />
             </div>
 
             {/* Detailed Location Address */}

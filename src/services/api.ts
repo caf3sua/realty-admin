@@ -1,4 +1,4 @@
-import type { Post, Developer, Project, Product, User, Customer, Advisory, Newsletter } from '../data/mockData';
+import type { Post, Developer, Project, Product, User, Customer, Advisory, Newsletter, Amenity } from '../data/mockData';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -21,10 +21,21 @@ const getHeaders = (hasBody = false): Record<string, string> => {
   return headers;
 };
 
+// Wrapper for fetch to handle 401 Unauthorized globally
+const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const res = await window.fetch(input, init);
+  if (res.status === 401 && !input.toString().includes('/auth/login')) {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
+    window.location.href = '/login';
+  }
+  return res;
+};
+
 export const api = {
   // Authentication
   async login(email: string, password: string): Promise<{ token: string; user: User }> {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    const res = await customFetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -37,7 +48,7 @@ export const api = {
   },
 
   async loginWithGoogle(token: string): Promise<{ token: string; user: User }> {
-    const res = await fetch(`${API_BASE_URL}/auth/google`, {
+    const res = await customFetch(`${API_BASE_URL}/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -52,19 +63,19 @@ export const api = {
 
   // Developers
   async getDevelopers(): Promise<Developer[]> {
-    const res = await fetch(`${API_BASE_URL}/developers`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/developers`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch developers');
     return res.json();
   },
 
   async getDeveloper(slug: string): Promise<Developer> {
-    const res = await fetch(`${API_BASE_URL}/developers/${slug}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/developers/${slug}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Failed to fetch developer with slug ${slug}`);
     return res.json();
   },
 
   async createDeveloper(data: Omit<Developer, 'id'> & { id?: string }): Promise<Developer> {
-    const res = await fetch(`${API_BASE_URL}/developers`, {
+    const res = await customFetch(`${API_BASE_URL}/developers`, {
       method: 'POST',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -74,7 +85,7 @@ export const api = {
   },
 
   async updateDeveloper(id: string, data: Omit<Developer, 'id'>): Promise<Developer> {
-    const res = await fetch(`${API_BASE_URL}/developers/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/developers/${id}`, {
       method: 'PUT',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -84,7 +95,7 @@ export const api = {
   },
 
   async deleteDeveloper(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/developers/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/developers/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -93,19 +104,19 @@ export const api = {
 
   // Projects
   async getProjects(): Promise<Project[]> {
-    const res = await fetch(`${API_BASE_URL}/projects`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/projects`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch projects');
     return res.json();
   },
 
   async getProject(slug: string): Promise<Project> {
-    const res = await fetch(`${API_BASE_URL}/projects/${slug}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/projects/${slug}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Failed to fetch project with slug ${slug}`);
     return res.json();
   },
 
   async createProject(data: Omit<Project, 'id'> & { id?: string }): Promise<Project> {
-    const res = await fetch(`${API_BASE_URL}/projects`, {
+    const res = await customFetch(`${API_BASE_URL}/projects`, {
       method: 'POST',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -115,7 +126,7 @@ export const api = {
   },
 
   async updateProject(id: string, data: Omit<Project, 'id'>): Promise<Project> {
-    const res = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/projects/${id}`, {
       method: 'PUT',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -125,7 +136,7 @@ export const api = {
   },
 
   async deleteProject(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/projects/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -147,19 +158,19 @@ export const api = {
       if (params.project_slug) query.append('project_slug', params.project_slug);
     }
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    const res = await fetch(`${API_BASE_URL}/products${queryString}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/products${queryString}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch products');
     return res.json();
   },
 
   async getProduct(slug: string): Promise<Product> {
-    const res = await fetch(`${API_BASE_URL}/products/${slug}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/products/${slug}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Failed to fetch product with slug ${slug}`);
     return res.json();
   },
 
   async createProduct(data: Omit<Product, 'id'> & { id?: string }): Promise<Product> {
-    const res = await fetch(`${API_BASE_URL}/products`, {
+    const res = await customFetch(`${API_BASE_URL}/products`, {
       method: 'POST',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -169,7 +180,7 @@ export const api = {
   },
 
   async updateProduct(id: string, data: Omit<Product, 'id'>): Promise<Product> {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/products/${id}`, {
       method: 'PUT',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -179,7 +190,7 @@ export const api = {
   },
 
   async deleteProduct(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/products/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -188,19 +199,19 @@ export const api = {
 
   // Users (using backend API)
   async getUsers(): Promise<User[]> {
-    const res = await fetch(`${API_BASE_URL}/users`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/users`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch users');
     return res.json();
   },
 
   async getUser(id: string): Promise<User> {
-    const res = await fetch(`${API_BASE_URL}/users/${id}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/users/${id}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Failed to fetch user with id ${id}`);
     return res.json();
   },
 
   async createUser(data: Omit<User, 'id'> & { id?: string; password?: string }): Promise<User> {
-    const res = await fetch(`${API_BASE_URL}/users`, {
+    const res = await customFetch(`${API_BASE_URL}/users`, {
       method: 'POST',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -213,7 +224,7 @@ export const api = {
   },
 
   async updateUser(id: string, data: Omit<User, 'id'> & { password?: string }): Promise<User> {
-    const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/users/${id}`, {
       method: 'PUT',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -226,7 +237,7 @@ export const api = {
   },
 
   async deleteUser(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/users/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -238,19 +249,19 @@ export const api = {
 
   // Posts
   async getPosts(): Promise<Post[]> {
-    const res = await fetch(`${API_BASE_URL}/posts`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/posts`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch posts');
     return res.json();
   },
 
   async getPost(slug: string): Promise<Post> {
-    const res = await fetch(`${API_BASE_URL}/posts/${slug}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/posts/${slug}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Failed to fetch post with slug ${slug}`);
     return res.json();
   },
 
   async createPost(data: Omit<Post, 'id'> & { id?: string }): Promise<Post> {
-    const res = await fetch(`${API_BASE_URL}/posts`, {
+    const res = await customFetch(`${API_BASE_URL}/posts`, {
       method: 'POST',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -260,7 +271,7 @@ export const api = {
   },
 
   async updatePost(id: string, data: Omit<Post, 'id'>): Promise<Post> {
-    const res = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/posts/${id}`, {
       method: 'PUT',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -270,7 +281,7 @@ export const api = {
   },
 
   async deletePost(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/posts/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -288,7 +299,7 @@ export const api = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_BASE_URL}/upload`, {
+    const res = await customFetch(`${API_BASE_URL}/upload`, {
       method: 'POST',
       headers,
       body: formData,
@@ -309,19 +320,19 @@ export const api = {
       if (params.source) query.append('source', params.source);
     }
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    const res = await fetch(`${API_BASE_URL}/crm/customers${queryString}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/crm/customers${queryString}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Không thể tải danh sách khách hàng');
     return res.json();
   },
 
   async getCustomer(id: string): Promise<Customer> {
-    const res = await fetch(`${API_BASE_URL}/crm/customers/${id}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/crm/customers/${id}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Không thể tải thông tin khách hàng với ID ${id}`);
     return res.json();
   },
 
   async createCustomer(data: Omit<Customer, 'id' | 'createdAt'> & { id?: string }): Promise<Customer> {
-    const res = await fetch(`${API_BASE_URL}/crm/customers`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/customers`, {
       method: 'POST',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -334,7 +345,7 @@ export const api = {
   },
 
   async updateCustomer(id: string, data: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
-    const res = await fetch(`${API_BASE_URL}/crm/customers/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/customers/${id}`, {
       method: 'PUT',
       headers: getHeaders(true),
       body: JSON.stringify(stripId(data)),
@@ -347,7 +358,7 @@ export const api = {
   },
 
   async deleteCustomer(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/crm/customers/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/customers/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -362,20 +373,20 @@ export const api = {
       if (params.status) query.append('status_filter', params.status);
     }
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    const res = await fetch(`${API_BASE_URL}/crm/advisories${queryString}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/crm/advisories${queryString}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Không thể tải danh sách yêu cầu tư vấn');
     return res.json();
   },
 
   async getAdvisory(id: string): Promise<Advisory> {
-    const res = await fetch(`${API_BASE_URL}/crm/advisories/${id}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/crm/advisories/${id}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Không thể tải yêu cầu tư vấn với ID ${id}`);
     return res.json();
   },
 
   // Advisory creation is public (no authentication required)
   async createAdvisory(data: Omit<Advisory, 'id' | 'createdAt' | 'status'> & { status?: string }): Promise<Advisory> {
-    const res = await fetch(`${API_BASE_URL}/crm/advisories`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/advisories`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -385,7 +396,7 @@ export const api = {
   },
 
   async updateAdvisoryStatus(id: string, status: string): Promise<Advisory> {
-    const res = await fetch(`${API_BASE_URL}/crm/advisories/${id}?status_update=${encodeURIComponent(status)}`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/advisories/${id}?status_update=${encodeURIComponent(status)}`, {
       method: 'PUT',
       headers: getHeaders(),
     });
@@ -394,7 +405,7 @@ export const api = {
   },
 
   async deleteAdvisory(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/crm/advisories/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/advisories/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -407,14 +418,14 @@ export const api = {
     if (active !== undefined) query.append('active', String(active));
     const queryString = query.toString() ? `?${query.toString()}` : '';
 
-    const res = await fetch(`${API_BASE_URL}/crm/newsletters${queryString}`, { headers: getHeaders() });
+    const res = await customFetch(`${API_BASE_URL}/crm/newsletters${queryString}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Không thể tải danh sách đăng ký nhận tin');
     return res.json();
   },
 
   // Newsletter subscription is public (no authentication required)
   async subscribeNewsletter(email: string): Promise<Newsletter> {
-    const res = await fetch(`${API_BASE_URL}/crm/newsletters`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/newsletters`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -427,7 +438,7 @@ export const api = {
   },
 
   async toggleNewsletterActive(id: string, active: boolean): Promise<Newsletter> {
-    const res = await fetch(`${API_BASE_URL}/crm/newsletters/${id}?active=${active}`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/newsletters/${id}?active=${active}`, {
       method: 'PUT',
       headers: getHeaders(),
     });
@@ -436,10 +447,46 @@ export const api = {
   },
 
   async deleteNewsletter(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/crm/newsletters/${id}`, {
+    const res = await customFetch(`${API_BASE_URL}/crm/newsletters/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
     if (!res.ok) throw new Error(`Không thể xóa đăng ký ${id}`);
+  },
+
+  // Amenities
+  async getAmenities(product_type?: string): Promise<Amenity[]> {
+    const query = product_type ? `?product_type=${product_type}` : '';
+    const res = await customFetch(`${API_BASE_URL}/amenities${query}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch amenities');
+    return res.json();
+  },
+
+  async createAmenity(data: Omit<Amenity, 'id' | 'created_at' | 'updated_at'>): Promise<Amenity> {
+    const res = await customFetch(`${API_BASE_URL}/amenities`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create amenity');
+    return res.json();
+  },
+
+  async updateAmenity(id: string, data: Omit<Amenity, 'id' | 'created_at' | 'updated_at'>): Promise<Amenity> {
+    const res = await customFetch(`${API_BASE_URL}/amenities/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to update amenity ${id}`);
+    return res.json();
+  },
+
+  async deleteAmenity(id: string): Promise<void> {
+    const res = await customFetch(`${API_BASE_URL}/amenities/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Failed to delete amenity ${id}`);
   },
 };

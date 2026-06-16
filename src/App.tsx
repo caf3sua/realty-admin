@@ -28,6 +28,7 @@ import { CustomerForm } from './pages/crm/CustomerForm';
 import { CustomerDetail } from './pages/crm/CustomerDetail';
 import { AdvisoryList } from './pages/crm/AdvisoryList';
 import { NewsletterList } from './pages/crm/NewsletterList';
+import { AmenitiesList } from './pages/config/AmenitiesList';
 import { PostList } from './pages/posts/PostList';
 import { PostDetail } from './pages/posts/PostDetail';
 import { PostForm } from './pages/posts/PostForm';
@@ -319,6 +320,16 @@ function App() {
               <AuthGuard>
                 <AdminLayout>
                   <NewsletterList />
+                </AdminLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/config/amenities"
+            element={
+              <AuthGuard>
+                <AdminLayout>
+                  <AmenitiesList />
                 </AdminLayout>
               </AuthGuard>
             }
