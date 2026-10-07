@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Post } from '../../data/mockData';
-import { ArrowLeft, Edit, Calendar, BookOpen, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, BookOpen, AlertTriangle, Tag } from 'lucide-react';
 
 export const PostDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -87,6 +87,7 @@ export const PostDetail: React.FC = () => {
               post.category === 'Thị trường' ? 'bg-amber-500 text-white' :
               post.category === 'Quy hoạch' ? 'bg-indigo-600 text-white' :
               post.category === 'Cẩm nang' ? 'bg-teal-500 text-white' :
+              post.category === 'Mua bán' ? 'bg-emerald-600 text-white' :
               'bg-blue-600 text-white'
             }`}>
               {post.category}
@@ -126,6 +127,26 @@ export const PostDetail: React.FC = () => {
             className="prose max-w-none prose-indigo text-slate-700 leading-relaxed space-y-4"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
+
+          {/* Tags list */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="pt-6 border-t border-slate-100 flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 text-slate-400 font-bold text-[11px] uppercase tracking-wide">
+                <Tag className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Thẻ bài viết:</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {post.tags.map(tag => (
+                  <span
+                    key={tag}
+                    className="px-2.5 py-1 bg-slate-50 border border-slate-200/80 hover:border-indigo-300 hover:text-indigo-600 text-slate-600 rounded text-xs font-semibold transition-all cursor-default"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

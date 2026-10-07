@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { RichTextEditor } from '../../components/RichTextEditor';
-import { ArrowLeft, Save, Sparkles, Upload, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Upload, Loader2, Tag, X, Plus } from 'lucide-react';
+
+const SUGGESTED_TAGS = ['Mua bán', 'Thị trường', 'Chung cư', 'Biệt thự', 'Quy hoạch', 'Pháp lý', 'Đầu tư', 'Hạ tầng', 'Vinhomes'];
 
 const convertToSlug = (text: string) => {
   return text
@@ -26,7 +28,9 @@ export const PostForm: React.FC = () => {
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
-  const [category, setCategory] = useState<'Thị trường' | 'Quy hoạch' | 'Cẩm nang' | 'Dự án'>('Thị trường');
+  const [category, setCategory] = useState<'Thị trường' | 'Quy hoạch' | 'Cẩm nang' | 'Dự án' | 'Mua bán'>('Thị trường');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [slug, setSlug] = useState('');
   const [publishedAt, setPublishedAt] = useState('');
 
@@ -45,6 +49,7 @@ export const PostForm: React.FC = () => {
           setContent(post.content);
           setImage(post.image);
           setCategory(post.category);
+          setTags(post.tags || []);
           setSlug(post.slug);
           setPublishedAt(post.publishedAt);
         })
@@ -54,6 +59,28 @@ export const PostForm: React.FC = () => {
         });
     }
   }, [routeSlug, isEditMode, navigate]);
+
+  const handleAddTag = (tagToAdd?: string) => {
+    const val = (tagToAdd !== undefined ? tagToAdd : tagInput).trim();
+    if (!val) return;
+    if (!tags.includes(val)) {
+      setTags(prev => [...prev, val]);
+    }
+    if (tagToAdd === undefined) {
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(prev => prev.filter(t => t !== tagToRemove));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -120,6 +147,7 @@ export const PostForm: React.FC = () => {
         content,
         image,
         category,
+        tags,
         slug,
         publishedAt: todayStr
       };
@@ -185,7 +213,82 @@ export const PostForm: React.FC = () => {
                 <option value="Quy hoạch">Quy hoạch</option>
                 <option value="Cẩm nang">Cẩm nang</option>
                 <option value="Dự án">Dự án</option>
+                <option value="Mua bán">Mua bán</option>
               </select>
+            </div>
+
+            {/* Tags Management */}
+            <div className="space-y-2 md:col-span-3 bg-slate-50/70 p-3.5 rounded-lg border border-slate-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Thẻ bài viết (Tags)</span>
+                  <span className="text-[10px] text-slate-400 font-normal lowercase">(1 bài viết có thể có nhiều tag)</span>
+                </label>
+                <span className="text-[10px] font-semibold text-slate-400">
+                  {tags.length} thẻ đã thêm
+                </span>
+              </div>
+
+              {/* Tag Badges List */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-indigo-200 text-indigo-700 rounded text-xs font-semibold shadow-xs transition-all hover:bg-indigo-50/50"
+                    >
+                      <span>#{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="p-0.5 hover:bg-indigo-100 rounded text-indigo-400 hover:text-indigo-700 transition-colors cursor-pointer"
+                        title="Xóa tag"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Input & Add Button */}
+              <div className="flex gap-2 pt-1">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Nhập tên tag rồi nhấn Enter hoặc phím Thêm..."
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all placeholder:text-slate-400"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddTag()}
+                  disabled={!tagInput.trim()}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm tag</span>
+                </button>
+              </div>
+
+              {/* Quick suggestions */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] text-slate-400 font-medium">Gợi ý nhanh:</span>
+                {SUGGESTED_TAGS.filter(st => !tags.includes(st)).slice(0, 8).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => handleAddTag(st)}
+                    className="px-2 py-0.5 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 border border-slate-200 rounded text-[10px] text-slate-600 font-medium transition-all cursor-pointer shadow-2xs"
+                  >
+                    + {st}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Slug */}

@@ -49,12 +49,13 @@ export const PostList: React.FC = () => {
 
   const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          post.summary.toLowerCase().includes(searchQuery.toLowerCase());
+                          post.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (post.tags && post.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
     const matchesCategory = categoryFilter === 'Tất cả' || post.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  const categories = ['Tất cả', 'Thị trường', 'Quy hoạch', 'Cẩm nang', 'Dự án'];
+  const categories = ['Tất cả', 'Thị trường', 'Quy hoạch', 'Cẩm nang', 'Dự án', 'Mua bán'];
 
   return (
     <div className="space-y-4">
@@ -127,21 +128,31 @@ export const PostList: React.FC = () => {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=80&h=80&q=80';
                           }}
                         />
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                           <Link to={`/posts/${post.slug}`} className="font-bold text-slate-800 hover:text-indigo-650 line-clamp-1">
                             {post.title}
                           </Link>
                           <p className="text-[10px] text-slate-400 line-clamp-1">{post.summary}</p>
+                          {post.tags && post.tags.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                              {post.tags.map(tag => (
+                                <span key={tag} className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200/60">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
 
                     {/* Category */}
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3.5 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide ${
                         post.category === 'Thị trường' ? 'bg-amber-50 text-amber-700 border border-amber-200/50' :
                         post.category === 'Quy hoạch' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/50' :
                         post.category === 'Cẩm nang' ? 'bg-teal-50 text-teal-700 border border-teal-200/50' :
+                        post.category === 'Mua bán' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' :
                         'bg-blue-50 text-blue-700 border border-blue-200/50'
                       }`}>
                         {post.category}
