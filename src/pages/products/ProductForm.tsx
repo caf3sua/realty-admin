@@ -3,7 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Product, Project, Developer, Amenity } from '../../data/mockData';
 import { MultiSelect } from '../../components/MultiSelect';
-import { ArrowLeft, Save, Sparkles, Upload, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Upload, Loader2, X, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+
+const generateRandomSuffix = (len = 5) => {
+  return Math.random().toString(36).substring(2, 2 + len);
+};
 
 const convertToSlug = (text: string) => {
   return text
@@ -24,12 +28,6 @@ const productTypesList = [
   { value: 'residential', label: 'Nhà thổ cư' }
 ];
 
-const defaultUnsplashPics = [
-  'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'
-];
 
 export const ProductForm: React.FC = () => {
   const { slug: routeSlug } = useParams<{ slug: string }>();
@@ -43,8 +41,10 @@ export const ProductForm: React.FC = () => {
   const [amenitiesList, setAmenitiesList] = useState<Amenity[]>([]);
 
   const [title, setTitle] = useState('');
+  const [slugSuffix, setSlugSuffix] = useState(() => generateRandomSuffix(5));
   const [slug, setSlug] = useState('');
   const [price, setPrice] = useState<number | ''>('');
+  const [expectedPrice, setExpectedPrice] = useState('');
   const [area, setArea] = useState<number | ''>('');
   const [bedrooms, setBedrooms] = useState<number>(1);
   const [bathrooms, setBathrooms] = useState<number>(1);
@@ -85,8 +85,9 @@ export const ProductForm: React.FC = () => {
           setProductId(prod.id);
           setTitle(prod.title);
           setSlug(prod.slug);
-          setPrice(prod.price);
-          setArea(prod.area);
+          setPrice(prod.price ? prod.price : '');
+          setExpectedPrice(prod.expectedPrice || '');
+          setArea(prod.area ? prod.area : '');
           setBedrooms(prod.bedrooms);
           setBathrooms(prod.bathrooms);
           setLocation(prod.location);
@@ -104,8 +105,7 @@ export const ProductForm: React.FC = () => {
           setPaymentMethod(prod.paymentMethod || '');
           setSelectedAmenities((prod.amenities || []).map((a: any) => typeof a === 'string' ? a : a.id));
         } else {
-          const randomPic = defaultUnsplashPics[Math.floor(Math.random() * defaultUnsplashPics.length)];
-          setImages([randomPic]);
+          setImages([]);
           if (devs.length > 0) {
             setDeveloper(devs[0].name);
           }
@@ -132,7 +132,8 @@ export const ProductForm: React.FC = () => {
     const val = e.target.value;
     setTitle(val);
     if (!isEditMode) {
-      setSlug(convertToSlug(val));
+      const base = convertToSlug(val);
+      setSlug(base ? `${base}-${slugSuffix}` : '');
     }
   };
 
@@ -200,8 +201,8 @@ export const ProductForm: React.FC = () => {
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = 'Tiêu đề sản phẩm không được để trống';
     if (!slug.trim()) newErrors.slug = 'Slug không được để trống';
-    if (price === '' || price <= 0) newErrors.price = 'Giá bán phải là số dương lớn hơn 0';
-    if (area === '' || area <= 0) newErrors.area = 'Diện tích phải là số dương lớn hơn 0';
+    if (price !== '' && Number(price) < 0) newErrors.price = 'Giá bán không được là số âm';
+    if (area !== '' && Number(area) < 0) newErrors.area = 'Diện tích không được là số âm';
     if (!location.trim()) newErrors.location = 'Vị trí địa chỉ không được để trống';
     if (!description.trim()) newErrors.description = 'Mô tả chi tiết không được để trống';
     if (images.length === 0) newErrors.images = 'Ít nhất phải có 1 hình ảnh sản phẩm';
@@ -214,15 +215,16 @@ export const ProductForm: React.FC = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    const priceNum = Number(price);
-    const areaNum = Number(area);
-    const pricePerSqm = Math.round((priceNum * 1000) / areaNum);
+    const priceNum = price === '' ? 0 : Number(price);
+    const areaNum = area === '' ? 0 : Number(area);
+    const pricePerSqm = (priceNum > 0 && areaNum > 0) ? Math.round((priceNum * 1000) / areaNum) : undefined;
     const productTypeName = productTypesList.find(t => t.value === productType)?.label || productType;
 
     const prodData = {
       title,
       slug,
       price: priceNum,
+      expectedPrice: expectedPrice.trim() || undefined,
       pricePerSqm,
       area: areaNum,
       bedrooms,
@@ -301,17 +303,42 @@ export const ProductForm: React.FC = () => {
 
             {/* Slug */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
-                Slug <span className="text-red-500">*</span>
-                {!isEditMode && <span title="Tự động phát sinh từ tên"><Sparkles className="w-3.5 h-3.5 text-indigo-500" /></span>}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                  Slug <span className="text-red-500">*</span>
+                  {!isEditMode && <span title="Tự động phát sinh từ tên sản phẩm"><Sparkles className="w-3.5 h-3.5 text-indigo-500" /></span>}
+                </label>
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSuffix = generateRandomSuffix(5);
+                      setSlugSuffix(newSuffix);
+                      const base = convertToSlug(title);
+                      if (base) {
+                        setSlug(`${base}-${newSuffix}`);
+                      }
+                    }}
+                    className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Đổi chuỗi ngẫu nhiên 5 ký tự"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Đổi mã đuôi ngẫu nhiên</span>
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
-                placeholder="can-ho-penthouse-ocean-park"
+                placeholder="can-ho-penthouse-ocean-park-a8f3b"
                 value={slug}
                 onChange={(e) => setSlug(convertToSlug(e.target.value))}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.slug ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
+                className={`w-full px-3 py-2 bg-slate-50 border ${errors.slug ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all font-mono`}
               />
+              <p className="text-[9px] text-slate-400 font-medium italic mt-0.5">
+                {!isEditMode 
+                  ? 'Slug tự động phát sinh kèm chuỗi ngẫu nhiên 5 ký tự (ví dụ: -a8f3b) để tránh trùng lặp.'
+                  : 'Slug định danh duy nhất của sản phẩm.'}
+              </p>
               {errors.slug && <p className="text-[10px] text-red-500 font-semibold">{errors.slug}</p>}
             </div>
 
@@ -362,8 +389,9 @@ export const ProductForm: React.FC = () => {
             {/* Price (Billion VNĐ) */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
-                Giá bán (Tỷ VNĐ) <span className="text-red-500">*</span>
-                {(price !== '' && area !== '' && area > 0) && (
+                Giá bán (Tỷ VNĐ)
+                <span className="text-[10px] text-slate-400 font-normal lowercase">(không bắt buộc)</span>
+                {(price !== '' && area !== '' && Number(area) > 0) && (
                   <span className="text-[9px] text-indigo-600 font-semibold lowercase">
                     (~ {Math.round((Number(price) * 1000) / Number(area))} tr/m²)
                   </span>
@@ -372,7 +400,7 @@ export const ProductForm: React.FC = () => {
               <input
                 type="number"
                 step="any"
-                placeholder="Ví dụ: 8.5"
+                placeholder="Ví dụ: 8.5 (để trống nếu Thỏa thuận / Liên hệ)"
                 value={price}
                 onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
                 className={`w-full px-3 py-2 bg-slate-50 border ${errors.price ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}
@@ -380,12 +408,34 @@ export const ProductForm: React.FC = () => {
               {errors.price && <p className="text-[10px] text-red-500 font-semibold">{errors.price}</p>}
             </div>
 
+            {/* Expected Price (Text) */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                Giá dự kiến
+                <span className="text-[10px] text-slate-400 font-normal lowercase">(không bắt buộc)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: khoảng 7 tỷ, 7.xx, từ 5 - 7 tỷ..."
+                value={expectedPrice}
+                onChange={(e) => setExpectedPrice(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-600 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all"
+              />
+              <p className="text-[9px] text-slate-400 font-medium italic mt-0.5">
+                Web sẽ ưu tiên hiển thị giá dự kiến này nếu được nhập.
+              </p>
+            </div>
+
             {/* Area (sqm) */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Diện tích (m²) <span className="text-red-500">*</span></label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                Diện tích (m²)
+                <span className="text-[10px] text-slate-400 font-normal lowercase">(không bắt buộc)</span>
+              </label>
               <input
                 type="number"
-                placeholder="Ví dụ: 120"
+                step="any"
+                placeholder="Ví dụ: 120 (không bắt buộc)"
                 value={area}
                 onChange={(e) => setArea(e.target.value === '' ? '' : Number(e.target.value))}
                 className={`w-full px-3 py-2 bg-slate-50 border ${errors.area ? 'border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600/20 text-xs text-slate-700 transition-all`}

@@ -202,8 +202,14 @@ export const ProductList: React.FC = () => {
 
                     {/* Price & Area */}
                     <td className="px-5 py-3.5 text-[10px] space-y-0.5">
-                      <div className="font-bold text-indigo-600">{prod.price} tỷ</div>
-                      <div className="text-slate-500">{prod.area} m² ({prod.bedrooms} PN / {prod.bathrooms} WC)</div>
+                      <div className="font-bold text-indigo-600">
+                        {prod.expectedPrice 
+                          ? prod.expectedPrice 
+                          : (prod.price && prod.price > 0 ? `${prod.price} tỷ` : 'Liên hệ')}
+                      </div>
+                      <div className="text-slate-500">
+                        {prod.area && prod.area > 0 ? `${prod.area} m²` : 'Chưa có DT'} ({prod.bedrooms} PN / {prod.bathrooms} WC)
+                      </div>
                     </td>
 
                     {/* Status Badge */}

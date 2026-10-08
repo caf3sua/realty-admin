@@ -2,9 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { RichTextEditor } from '../../components/RichTextEditor';
-import { ArrowLeft, Save, Sparkles, Upload, Loader2, Tag, X, Plus } from 'lucide-react';
+import type { PostAttachment } from '../../data/mockData';
+import { ArrowLeft, Save, Sparkles, Upload, Loader2, Tag, X, Plus, Paperclip, FileText, Trash2, Download, RefreshCw } from 'lucide-react';
 
-const SUGGESTED_TAGS = ['Mua bán', 'Thị trường', 'Chung cư', 'Biệt thự', 'Quy hoạch', 'Pháp lý', 'Đầu tư', 'Hạ tầng', 'Vinhomes'];
+const SUGGESTED_TAGS = ['OceanPark2', 'OceanPark3', 'Tin tức', 'Mua bán', 'Thị trường', 'Chung cư', 'Biệt thự', 'Quy hoạch', 'Pháp lý', 'Đầu tư', 'Hạ tầng', 'Vinhomes'];
+
+const generateRandomSuffix = (len = 5) => {
+  return Math.random().toString(36).substring(2, 2 + len);
+};
+
+const formatFileSize = (bytes?: number) => {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 
 const convertToSlug = (text: string) => {
   return text
@@ -18,6 +31,14 @@ const convertToSlug = (text: string) => {
     .replace(/-+/g, '-');
 };
 
+const getTodayString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const PostForm: React.FC = () => {
   const { slug: routeSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -28,11 +49,15 @@ export const PostForm: React.FC = () => {
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
-  const [category, setCategory] = useState<'Thị trường' | 'Quy hoạch' | 'Cẩm nang' | 'Dự án' | 'Mua bán'>('Thị trường');
+  const [category, setCategory] = useState<'Thị trường' | 'Quy hoạch' | 'Cẩm nang' | 'Dự án' | 'Mua bán' | 'Tin tức'>('Tin tức');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [attachments, setAttachments] = useState<PostAttachment[]>([]);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [slugSuffix, setSlugSuffix] = useState(() => generateRandomSuffix(5));
   const [slug, setSlug] = useState('');
-  const [publishedAt, setPublishedAt] = useState('');
+  const [publishedAt, setPublishedAt] = useState(() => getTodayString());
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -50,6 +75,7 @@ export const PostForm: React.FC = () => {
           setImage(post.image);
           setCategory(post.category);
           setTags(post.tags || []);
+          setAttachments(post.attachments || []);
           setSlug(post.slug);
           setPublishedAt(post.publishedAt);
         })
@@ -82,11 +108,49 @@ export const PostForm: React.FC = () => {
     }
   };
 
+  const handleAttachmentsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setIsUploadingAttachment(true);
+      setAttachmentError(null);
+
+      const newAttachments: PostAttachment[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 25 * 1024 * 1024) {
+          throw new Error(`Tệp "${file.name}" vượt quá giới hạn 25MB`);
+        }
+        const res = await api.uploadFile(file);
+        newAttachments.push({
+          name: file.name,
+          url: res.url,
+          size: file.size,
+          type: file.type || file.name.split('.').pop()
+        });
+      }
+
+      setAttachments(prev => [...prev, ...newAttachments]);
+    } catch (err: any) {
+      console.error(err);
+      setAttachmentError(err.message || 'Lỗi khi tải tệp đính kèm');
+    } finally {
+      setIsUploadingAttachment(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveAttachment = (indexToRemove: number) => {
+    setAttachments(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setTitle(val);
     if (!isEditMode) {
-      setSlug(convertToSlug(val));
+      const base = convertToSlug(val);
+      setSlug(base ? `${base}-${slugSuffix}` : '');
     }
   };
 
@@ -139,7 +203,7 @@ export const PostForm: React.FC = () => {
       setIsSaving(true);
       
       // Get current date as string 'YYYY-MM-DD' if publishedAt is empty
-      const todayStr = publishedAt || new Date().toISOString().split('T')[0];
+      const todayStr = publishedAt || getTodayString();
 
       const postData = {
         title,
@@ -148,6 +212,7 @@ export const PostForm: React.FC = () => {
         image,
         category,
         tags,
+        attachments,
         slug,
         publishedAt: todayStr
       };
@@ -209,6 +274,7 @@ export const PostForm: React.FC = () => {
                 onChange={(e) => setCategory(e.target.value as any)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-650/20 text-xs text-slate-750 transition-all font-semibold cursor-pointer"
               >
+                <option value="Tin tức">Tin tức</option>
                 <option value="Thị trường">Thị trường</option>
                 <option value="Quy hoạch">Quy hoạch</option>
                 <option value="Cẩm nang">Cẩm nang</option>
@@ -278,7 +344,7 @@ export const PostForm: React.FC = () => {
               {/* Quick suggestions */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <span className="text-[10px] text-slate-400 font-medium">Gợi ý nhanh:</span>
-                {SUGGESTED_TAGS.filter(st => !tags.includes(st)).slice(0, 8).map((st) => (
+                {SUGGESTED_TAGS.filter(st => !tags.includes(st)).map((st) => (
                   <button
                     key={st}
                     type="button"
@@ -293,21 +359,43 @@ export const PostForm: React.FC = () => {
 
             {/* Slug */}
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
-                Slug <span className="text-red-500">*</span>
-                {!isEditMode && <span title="Tự động phát sinh từ tiêu đề"><Sparkles className="w-3.5 h-3.5 text-indigo-500" /></span>}
-              </label>
-              <input
-                type="text"
-                placeholder="bat-dong-san-ven-bien-quang-ninh"
-                value={slug}
-                onChange={(e) => setSlug(convertToSlug(e.target.value))}
-                className={`w-full px-3 py-2 bg-slate-50 border ${errors.slug ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-650/20 text-xs text-slate-700 transition-all`}
-              />
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                  Slug <span className="text-red-500">*</span>
+                  {!isEditMode && <span title="Tự động phát sinh từ tiêu đề"><Sparkles className="w-3.5 h-3.5 text-indigo-500" /></span>}
+                </label>
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSuffix = generateRandomSuffix(5);
+                      setSlugSuffix(newSuffix);
+                      const base = convertToSlug(title);
+                      if (base) {
+                        setSlug(`${base}-${newSuffix}`);
+                      }
+                    }}
+                    className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Đổi chuỗi ngẫu nhiên 5 ký tự"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Đổi mã đuôi ngẫu nhiên</span>
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="bat-dong-san-ven-bien-quang-ninh-a8f3b"
+                  value={slug}
+                  onChange={(e) => setSlug(convertToSlug(e.target.value))}
+                  className={`w-full px-3 py-2 bg-slate-50 border ${errors.slug ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-indigo-600'} rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-650/20 text-xs text-slate-700 transition-all font-mono`}
+                />
+              </div>
               <p className="text-[9px] text-slate-400 font-medium italic mt-0.5">
                 {!isEditMode 
-                  ? 'Hệ thống sẽ tự động thêm một chuỗi ngẫu nhiên (ví dụ: -a8f3b) vào cuối slug khi lưu để tránh trùng lặp.'
-                  : 'Slug hiện tại của bài viết.'}
+                  ? 'Slug tự động phát sinh kèm chuỗi ngẫu nhiên 5 ký tự (ví dụ: -a8f3b) để tránh trùng lặp.'
+                  : 'Slug định danh duy nhất của bài viết.'}
               </p>
               {errors.slug && <p className="text-[10px] text-red-500 font-semibold">{errors.slug}</p>}
             </div>
@@ -336,13 +424,19 @@ export const PostForm: React.FC = () => {
               {errors.summary && <p className="text-[10px] text-red-500 font-semibold">{errors.summary}</p>}
             </div>
 
-            {/* Banner Image Upload */}
-            <div className="space-y-1.5 md:col-span-3">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ảnh bìa bài viết <span className="text-red-500">*</span></label>
+            {/* Row: Ảnh bìa bài viết & Tệp đính kèm (Side by Side in 1 row) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:col-span-3">
               
-              <div className="flex flex-col sm:flex-row items-start gap-4">
-                {/* Upload zone */}
-                <div className="relative flex-1 w-full">
+              {/* Column 1: Ảnh bìa bài viết */}
+              <div className="space-y-1.5 flex flex-col">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                    Ảnh bìa bài viết <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[9px] text-slate-400">Tối đa 5MB</span>
+                </div>
+
+                <div className="relative flex-1 flex flex-col justify-center border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-slate-50/50 rounded-xl p-4 transition-all group text-center min-h-[175px]">
                   <input
                     type="file"
                     id="post-image-upload"
@@ -351,50 +445,156 @@ export const PostForm: React.FC = () => {
                     onChange={handleImageUpload}
                     disabled={isUploading}
                   />
-                  
-                  <label
-                    htmlFor="post-image-upload"
-                    className={`flex flex-col items-center justify-center border-2 border-dashed ${
-                      errors.image || uploadError ? 'border-red-300 hover:border-red-400 bg-red-50/20' : 'border-slate-300 hover:border-indigo-500 bg-slate-50/50'
-                    } rounded-xl p-6 cursor-pointer transition-all duration-200 group text-center min-h-[140px] w-full`}
-                  >
-                    {isUploading ? (
-                      <div className="space-y-2 flex flex-col items-center justify-center">
-                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                        <span className="text-xs text-slate-500 font-medium">Đang tải hình ảnh lên S3...</span>
+                  {isUploading ? (
+                    <div className="space-y-2 flex flex-col items-center justify-center py-4">
+                      <Loader2 className="w-7 h-7 text-indigo-600 animate-spin" />
+                      <span className="text-xs text-slate-500 font-medium">Đang tải ảnh lên S3...</span>
+                    </div>
+                  ) : image ? (
+                    <div className="space-y-2 flex flex-col items-center justify-center">
+                      <div className="w-full max-w-[200px] h-24 rounded-lg border border-slate-200 bg-white p-1 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-102 transition-transform duration-200">
+                        <img src={image} alt="Banner Preview" className="w-full h-full object-cover rounded" />
                       </div>
-                    ) : image ? (
-                      <div className="space-y-2 flex flex-col items-center justify-center">
-                        <div className="w-48 h-24 rounded-lg border border-slate-200 bg-white p-1 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-102 transition-transform duration-200">
-                          <img src={image} alt="Banner Preview" className="w-full h-full object-cover rounded" />
-                        </div>
-                        <span className="text-[10px] text-indigo-600 font-bold group-hover:underline uppercase tracking-wider">Chọn ảnh khác</span>
+                      <div className="flex items-center gap-2">
+                        <label
+                          htmlFor="post-image-upload"
+                          className="text-[10px] text-indigo-600 font-bold hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          Chọn ảnh khác
+                        </label>
+                        <span className="text-slate-300">•</span>
+                        <a
+                          href={image}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] text-slate-500 hover:text-indigo-600 font-medium"
+                        >
+                          Xem ảnh S3
+                        </a>
                       </div>
-                    ) : (
-                      <div className="space-y-2 flex flex-col items-center justify-center">
-                        <div className="p-3 bg-slate-100 rounded-full group-hover:bg-indigo-50 transition-colors duration-200">
-                          <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-600 font-semibold">Tải ảnh bìa lên S3</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">Hỗ trợ PNG, JPG, JPEG tối đa 5MB</p>
-                        </div>
+                    </div>
+                  ) : (
+                    <label htmlFor="post-image-upload" className="cursor-pointer space-y-2 flex flex-col items-center justify-center py-3">
+                      <div className="p-2.5 bg-slate-100 rounded-full group-hover:bg-indigo-50 transition-colors duration-200">
+                        <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-600" />
                       </div>
-                    )}
-                  </label>
+                      <div>
+                        <p className="text-xs text-slate-600 font-semibold">Tải ảnh bìa lên S3</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Hỗ trợ PNG, JPG, JPEG</p>
+                      </div>
+                    </label>
+                  )}
                 </div>
-                
-                {/* Banner link preview */}
-                {image && (
-                  <div className="w-full sm:flex-1 space-y-2 text-slate-550 bg-slate-50 border border-slate-200/60 rounded-xl p-4 text-[11px] self-stretch break-all">
-                    <p className="font-bold text-slate-600 uppercase text-[9px] tracking-wider">Đường dẫn S3 ảnh bìa</p>
-                    <a href={image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline break-all block mt-1 font-semibold">{image}</a>
-                  </div>
-                )}
+                {uploadError && <p className="text-[10px] text-red-500 font-semibold">{uploadError}</p>}
+                {errors.image && <p className="text-[10px] text-red-500 font-semibold">{errors.image}</p>}
               </div>
-              
-              {uploadError && <p className="text-[10px] text-red-500 font-semibold">{uploadError}</p>}
-              {errors.image && <p className="text-[10px] text-red-500 font-semibold">{errors.image}</p>}
+
+              {/* Column 2: Tệp đính kèm (Attachments) */}
+              <div className="space-y-1.5 flex flex-col">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Tệp đính kèm (Attachments)</span>
+                    <span className="text-indigo-600 font-bold">({attachments.length})</span>
+                  </label>
+
+                  <div>
+                    <input
+                      type="file"
+                      id="post-attachments-upload"
+                      multiple
+                      className="hidden"
+                      onChange={handleAttachmentsUpload}
+                      disabled={isUploadingAttachment}
+                    />
+                    <label
+                      htmlFor="post-attachments-upload"
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold uppercase transition-all shadow-2xs ${
+                        isUploadingAttachment 
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
+                      }`}
+                    >
+                      {isUploadingAttachment ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Đang tải...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3 h-3" />
+                          <span>+ Thêm tệp</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-start min-h-[175px] max-h-[220px] overflow-y-auto">
+                  {attachmentError && (
+                    <p className="text-[10px] text-red-500 font-semibold mb-1.5">{attachmentError}</p>
+                  )}
+
+                  {attachments.length > 0 ? (
+                    <div className="space-y-1.5 w-full">
+                      {attachments.map((att, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200/70 gap-2 hover:border-indigo-200 transition-colors shadow-2xs text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <FileText className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <a
+                                href={att.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-semibold text-slate-700 hover:text-indigo-600 truncate block text-[11px]"
+                                title={att.name}
+                              >
+                                {att.name}
+                              </a>
+                              <span className="text-[9px] text-slate-400">
+                                {formatFileSize(att.size)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <a
+                              href={att.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 text-slate-400 hover:text-indigo-600 rounded transition-colors"
+                              title="Tải xuống / Xem tệp"
+                            >
+                              <Download className="w-3 h-3" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAttachment(index)}
+                              className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                              title="Xóa tệp"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <label
+                      htmlFor="post-attachments-upload"
+                      className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-lg p-3 text-center cursor-pointer hover:border-indigo-300 transition-colors group"
+                    >
+                      <Paperclip className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 mb-1 transition-colors" />
+                      <p className="text-[11px] text-slate-500 font-semibold">Chưa có tệp đính kèm</p>
+                      <p className="text-[9px] text-slate-400">Nhấn để tải lên PDF, Word, Excel, ZIP (tối đa 25MB)</p>
+                    </label>
+                  )}
+                </div>
+              </div>
+
             </div>
 
             {/* Rich Text Editor for Content */}

@@ -157,13 +157,23 @@ export const ProductDetail: React.FC = () => {
               
               <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1.5">
                 <div className="flex items-baseline gap-1 text-slate-500">
-                  Giá bán: <span className="text-xl font-bold text-indigo-600">{product.price} Tỷ VNĐ</span>
+                  {product.expectedPrice ? 'Giá dự kiến:' : 'Giá bán:'}{' '}
+                  <span className="text-xl font-bold text-indigo-600">
+                    {product.expectedPrice 
+                      ? product.expectedPrice 
+                      : (product.price && product.price > 0 ? `${product.price} Tỷ VNĐ` : 'Liên hệ')}
+                  </span>
+                  {product.expectedPrice && product.price && product.price > 0 ? (
+                    <span className="text-xs text-slate-400 ml-2 font-normal">
+                      (Giá niêm yết: {product.price} Tỷ VNĐ)
+                    </span>
+                  ) : null}
                 </div>
-                {product.pricePerSqm && (
+                {product.pricePerSqm && product.pricePerSqm > 0 ? (
                   <div className="flex items-center gap-1 text-slate-400 mt-1">
                     Đơn giá: <span className="text-slate-600 font-bold">{product.pricePerSqm} triệu/m²</span>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -174,7 +184,9 @@ export const ProductDetail: React.FC = () => {
               <div className="space-y-1">
                 <Maximize2 className="w-4 h-4 mx-auto text-slate-450" />
                 <span className="text-[8px] text-slate-400 font-bold block uppercase tracking-wider">Diện tích</span>
-                <span className="font-bold text-slate-800">{product.area} m²</span>
+                <span className="font-bold text-slate-800">
+                  {product.area && product.area > 0 ? `${product.area} m²` : 'Chưa cập nhật'}
+                </span>
               </div>
               <div className="space-y-1 border-x border-slate-200">
                 <Bed className="w-4 h-4 mx-auto text-slate-450" />

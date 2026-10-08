@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Post } from '../../data/mockData';
-import { ArrowLeft, Edit, Calendar, BookOpen, AlertTriangle, Tag } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, BookOpen, AlertTriangle, Tag, Paperclip, Download, FileText } from 'lucide-react';
+
+const formatFileSize = (bytes?: number) => {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 
 export const PostDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -84,6 +92,7 @@ export const PostDetail: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-900/10 to-transparent" />
           <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
             <span className={`px-2.5 py-1 rounded text-[9px] font-extrabold uppercase tracking-wider ${
+              post.category === 'Tin tức' ? 'bg-sky-600 text-white' :
               post.category === 'Thị trường' ? 'bg-amber-500 text-white' :
               post.category === 'Quy hoạch' ? 'bg-indigo-600 text-white' :
               post.category === 'Cẩm nang' ? 'bg-teal-500 text-white' :
@@ -127,6 +136,42 @@ export const PostDetail: React.FC = () => {
             className="prose max-w-none prose-indigo text-slate-700 leading-relaxed space-y-4"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
+
+          {/* Attachments List */}
+          {post.attachments && post.attachments.length > 0 && (
+            <div className="pt-6 border-t border-slate-100 space-y-3">
+              <div className="flex items-center gap-1.5 text-slate-700 font-bold text-xs uppercase tracking-wide">
+                <Paperclip className="w-4 h-4 text-indigo-600" />
+                <span>Tài liệu đính kèm ({post.attachments.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {post.attachments.map((att, i) => (
+                  <a
+                    key={i}
+                    href={att.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between p-3 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-300 rounded-lg group transition-all"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-700 group-hover:text-indigo-650 truncate text-xs">
+                          {att.name}
+                        </p>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {formatFileSize(att.size)}
+                        </span>
+                      </div>
+                    </div>
+                    <Download className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 shrink-0 ml-2" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Tags list */}
           {post.tags && post.tags.length > 0 && (

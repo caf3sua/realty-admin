@@ -28,9 +28,10 @@ export interface Product {
   id: string;
   title: string;
   slug: string;
-  price: number; // Tỷ VNĐ
+  price?: number; // Tỷ VNĐ
+  expectedPrice?: string; // Giá dự kiến: khoảng 7 tỷ, 7.xx, ...
   pricePerSqm?: number; // Triệu/m2
-  area: number; // m2
+  area?: number; // m2
   bedrooms: number;
   bathrooms: number;
   location: string;
@@ -48,6 +49,8 @@ export interface Product {
   handoverCondition?: string;
   paymentMethod?: string;
   amenities?: { id: string; name: string; icon?: string; }[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Developer {
@@ -436,6 +439,13 @@ export class MockDatabase {
   }
 }
 
+export interface PostAttachment {
+  name: string;
+  url: string;
+  size?: number;
+  type?: string;
+}
+
 export interface Post {
   id: string;
   title: string;
@@ -444,8 +454,9 @@ export interface Post {
   content: string;
   image: string;
   publishedAt: string;
-  category: 'Thị trường' | 'Quy hoạch' | 'Cẩm nang' | 'Dự án' | 'Mua bán';
+  category: 'Thị trường' | 'Quy hoạch' | 'Cẩm nang' | 'Dự án' | 'Mua bán' | 'Tin tức';
   tags?: string[];
+  attachments?: PostAttachment[];
 }
 
 export type NewsPost = Post;

@@ -289,7 +289,7 @@ export const api = {
   },
 
   // File Upload
-  async uploadFile(file: File): Promise<{ url: string }> {
+  async uploadFile(file: File): Promise<{ url: string; filename?: string; size?: number; content_type?: string }> {
     const formData = new FormData();
     formData.append('file', file);
 
