@@ -208,7 +208,7 @@ export const ProductList: React.FC = () => {
                           : (prod.price && prod.price > 0 ? `${prod.price} tỷ` : 'Liên hệ')}
                       </div>
                       <div className="text-slate-500">
-                        {prod.area && prod.area > 0 ? `${prod.area} m²` : 'Chưa có DT'} ({prod.bedrooms} PN / {prod.bathrooms} WC)
+                        {prod.area && prod.area > 0 ? `${prod.area} m²` : 'Chưa có DT'} ({prod.bedrooms && prod.bedrooms > 0 ? `${prod.bedrooms} PN` : '-'} / {prod.bathrooms && prod.bathrooms > 0 ? `${prod.bathrooms} WC` : '-'})
                       </div>
                     </td>
 

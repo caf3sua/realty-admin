@@ -191,12 +191,12 @@ export const ProductDetail: React.FC = () => {
               <div className="space-y-1 border-x border-slate-200">
                 <Bed className="w-4 h-4 mx-auto text-slate-450" />
                 <span className="text-[8px] text-slate-400 font-bold block uppercase tracking-wider">Phòng ngủ</span>
-                <span className="font-bold text-slate-800">{product.bedrooms} PN</span>
+                <span className="font-bold text-slate-800">{product.bedrooms && product.bedrooms > 0 ? `${product.bedrooms} PN` : '-'}</span>
               </div>
               <div className="space-y-1">
                 <Bath className="w-4 h-4 mx-auto text-slate-450" />
                 <span className="text-[8px] text-slate-400 font-bold block uppercase tracking-wider">Phòng tắm</span>
-                <span className="font-bold text-slate-800">{product.bathrooms} WC</span>
+                <span className="font-bold text-slate-800">{product.bathrooms && product.bathrooms > 0 ? `${product.bathrooms} WC` : '-'}</span>
               </div>
             </div>
 
