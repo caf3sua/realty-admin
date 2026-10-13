@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Developer } from '../../data/mockData';
-import { Search, Plus, Eye, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Calendar } from 'lucide-react';
+import { sortByDateDesc, formatDateVN, formatDateTimeVN } from '../../utils/date';
 
 export const DeveloperList: React.FC = () => {
   const [developers, setDevelopers] = useState<Developer[]>([]);
@@ -47,9 +48,11 @@ export const DeveloperList: React.FC = () => {
   }
 
 
-  const filteredDevelopers = developers.filter(dev => 
-    dev.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    dev.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredDevelopers = sortByDateDesc(
+    developers.filter(dev => 
+      dev.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dev.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   return (
@@ -87,6 +90,7 @@ export const DeveloperList: React.FC = () => {
                 <th className="px-5 py-3">Logo & Tên</th>
                 <th className="px-5 py-3">Slogan / Tiêu đề</th>
                 <th className="px-5 py-3">Slug</th>
+                <th className="px-5 py-3">Ngày cập nhật</th>
                 <th className="px-5 py-3 text-center w-28">Hành động</th>
               </tr>
             </thead>
@@ -116,6 +120,23 @@ export const DeveloperList: React.FC = () => {
                     {/* Slug */}
                     <td className="px-5 py-3.5 text-slate-400 font-semibold">
                       {dev.slug}
+                    </td>
+
+                    {/* Updated / Created Date */}
+                    <td className="px-5 py-3.5 whitespace-nowrap text-slate-500">
+                      {dev.updatedAt || dev.createdAt ? (
+                        <div 
+                          className="flex items-center gap-1.5"
+                          title={dev.updatedAt ? `Cập nhật: ${formatDateTimeVN(dev.updatedAt)}` : `Tạo: ${formatDateTimeVN(dev.createdAt)}`}
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-[11px] font-medium text-slate-600">
+                            {formatDateVN(dev.updatedAt || dev.createdAt)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">Chưa có</span>
+                      )}
                     </td>
 
                     {/* Actions */}
@@ -148,7 +169,7 @@ export const DeveloperList: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-5 py-12 text-center text-slate-400 font-medium italic">
+                  <td colSpan={5} className="px-5 py-12 text-center text-slate-400 font-medium italic">
                     Không tìm thấy chủ đầu tư nào phù hợp.
                   </td>
                 </tr>

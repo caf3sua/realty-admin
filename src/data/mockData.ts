@@ -22,6 +22,8 @@ export interface Project {
   scale: string;
   priceRange: string;
   tags: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Product {
@@ -61,6 +63,8 @@ export interface Developer {
   description: string;
   slug: string;
   linkText: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface User {
@@ -70,6 +74,7 @@ export interface User {
   role: 'admin' | 'staff';
   status: 'active' | 'inactive';
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Customer {
@@ -84,6 +89,7 @@ export interface Customer {
   needs?: string;
   note?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Advisory {
@@ -95,12 +101,14 @@ export interface Advisory {
   productName?: string;
   status: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Newsletter {
   id: string;
   email: string;
   createdAt: string;
+  updatedAt?: string;
   active: boolean;
 }
 
@@ -457,6 +465,8 @@ export interface Post {
   category: 'Thị trường' | 'Quy hoạch' | 'Cẩm nang' | 'Dự án' | 'Mua bán' | 'Tin tức';
   tags?: string[];
   attachments?: PostAttachment[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type NewsPost = Post;

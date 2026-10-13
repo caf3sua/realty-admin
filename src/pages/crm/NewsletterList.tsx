@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import type { Newsletter } from '../../data/mockData';
 import { Mail, Trash2, AlertTriangle, ToggleLeft, ToggleRight, CheckCircle2, XCircle } from 'lucide-react';
+import { sortByDateDesc, formatDateTimeVN } from '../../utils/date';
 
 export const NewsletterList: React.FC = () => {
   const [emails, setEmails] = useState<Newsletter[]>([]);
@@ -100,7 +101,7 @@ export const NewsletterList: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-755">
               {emails.length > 0 ? (
-                emails.map((item) => (
+                sortByDateDesc(emails).map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     {/* Email */}
                     <td className="px-5 py-3.5 font-bold text-slate-900">
@@ -110,14 +111,10 @@ export const NewsletterList: React.FC = () => {
                     </td>
 
                     {/* Date */}
-                    <td className="px-5 py-3.5 text-slate-455 font-semibold">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : '—'}
+                    <td className="px-5 py-3.5 text-slate-455 font-semibold whitespace-nowrap">
+                      <span title={item.updatedAt ? `Cập nhật: ${formatDateTimeVN(item.updatedAt)}` : `Đăng ký: ${formatDateTimeVN(item.createdAt)}`}>
+                        {item.updatedAt || item.createdAt ? formatDateTimeVN(item.updatedAt || item.createdAt) : '—'}
+                      </span>
                     </td>
 
                     {/* Active Status Badge & Switch */}

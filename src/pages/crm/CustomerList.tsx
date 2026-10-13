@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Customer } from '../../data/mockData';
 import { Search, Plus, Eye, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { sortByDateDesc, formatDateTimeVN } from '../../utils/date';
 
 export const CustomerList: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -147,7 +148,7 @@ export const CustomerList: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {customers.length > 0 ? (
-                customers.map((cust) => (
+                sortByDateDesc(customers).map((cust) => (
                   <tr key={cust.id} className="hover:bg-slate-50/50 transition-colors">
                     {/* Customer Code */}
                     <td className="px-5 py-3.5 font-semibold text-indigo-600">
@@ -191,15 +192,11 @@ export const CustomerList: React.FC = () => {
                       {cust.source}
                     </td>
 
-                    {/* Created Date */}
-                    <td className="px-5 py-3.5 text-slate-400">
-                      {cust.createdAt ? new Date(cust.createdAt).toLocaleDateString('vi-VN', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : '—'}
+                    {/* Created / Updated Date */}
+                    <td className="px-5 py-3.5 text-slate-400 whitespace-nowrap">
+                      <span title={cust.updatedAt ? `Cập nhật: ${formatDateTimeVN(cust.updatedAt)}` : `Tạo: ${formatDateTimeVN(cust.createdAt)}`}>
+                        {cust.updatedAt || cust.createdAt ? formatDateTimeVN(cust.updatedAt || cust.createdAt) : '—'}
+                      </span>
                     </td>
 
                     {/* Actions */}

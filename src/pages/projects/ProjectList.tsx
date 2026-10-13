@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Project } from '../../data/mockData';
-import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Filter } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Filter, Calendar } from 'lucide-react';
+import { sortByDateDesc, formatDateVN, formatDateTimeVN } from '../../utils/date';
 
 export const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -48,15 +49,17 @@ export const ProjectList: React.FC = () => {
   }
 
 
-  const filteredProjects = projects.filter(proj => {
-    const matchesSearch = proj.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          proj.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          proj.developer.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || proj.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const filteredProjects = sortByDateDesc(
+    projects.filter(proj => {
+      const matchesSearch = proj.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            proj.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            proj.developer.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || proj.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+  );
 
   return (
     <div className="space-y-4">
@@ -112,6 +115,7 @@ export const ProjectList: React.FC = () => {
                 <th className="px-5 py-3">Chủ đầu tư</th>
                 <th className="px-5 py-3">Vị trí</th>
                 <th className="px-5 py-3">Quy mô & Khoảng giá</th>
+                <th className="px-5 py-3">Ngày cập nhật</th>
                 <th className="px-5 py-3 text-center">Trạng thái</th>
                 <th className="px-5 py-3 text-center w-28">Hành động</th>
               </tr>
@@ -148,6 +152,23 @@ export const ProjectList: React.FC = () => {
                     <td className="px-5 py-3.5 space-y-0.5 text-[10px]">
                       <div>Quy mô: <span className="text-slate-800 font-bold">{proj.scale}</span></div>
                       <div className="text-slate-400">Giá: <span className="text-slate-600">{proj.priceRange}</span></div>
+                    </td>
+
+                    {/* Updated / Created Date */}
+                    <td className="px-5 py-3.5 whitespace-nowrap text-slate-500">
+                      {proj.updatedAt || proj.createdAt ? (
+                        <div 
+                          className="flex items-center gap-1.5"
+                          title={proj.updatedAt ? `Cập nhật: ${formatDateTimeVN(proj.updatedAt)}` : `Tạo: ${formatDateTimeVN(proj.createdAt)}`}
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-[11px] font-medium text-slate-600">
+                            {formatDateVN(proj.updatedAt || proj.createdAt)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">Chưa có</span>
+                      )}
                     </td>
 
                     {/* Status badge */}
@@ -193,7 +214,7 @@ export const ProjectList: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-slate-400 font-medium italic">
+                  <td colSpan={7} className="px-5 py-12 text-center text-slate-400 font-medium italic">
                     Không tìm thấy dự án nào phù hợp.
                   </td>
                 </tr>

@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import type { User } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Shield, CheckCircle, Ban } from 'lucide-react';
+import { sortByDateDesc, formatDateVN, formatDateTimeVN } from '../../utils/date';
 
 export const UserList: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -54,13 +55,15 @@ export const UserList: React.FC = () => {
   }
 
 
-  const filteredUsers = users.filter(usr => {
-    const matchesSearch = usr.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          usr.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || usr.role === roleFilter;
-    
-    return matchesSearch && matchesRole;
-  });
+  const filteredUsers = sortByDateDesc(
+    users.filter(usr => {
+      const matchesSearch = usr.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            usr.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRole = roleFilter === 'all' || usr.role === roleFilter;
+      
+      return matchesSearch && matchesRole;
+    })
+  );
 
   return (
     <div className="space-y-4">
@@ -157,9 +160,11 @@ export const UserList: React.FC = () => {
                       </span>
                     </td>
 
-                    {/* Created Date */}
-                    <td className="px-5 py-3.5 text-slate-500">
-                      {usr.createdAt}
+                    {/* Created / Updated Date */}
+                    <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">
+                      <span title={usr.updatedAt ? `Cập nhật: ${formatDateTimeVN(usr.updatedAt)}` : `Tạo: ${formatDateTimeVN(usr.createdAt)}`}>
+                        {formatDateVN(usr.updatedAt || usr.createdAt)}
+                      </span>
                     </td>
 
                     {/* Status */}

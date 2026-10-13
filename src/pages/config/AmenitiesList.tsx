@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, CheckCircle2, XCircle, Plus, Edit2, Trash2, X, AlertTriangle, Image as ImageIcon, Upload } from 'lucide-react';
+import { Settings, CheckCircle2, XCircle, Plus, Edit2, Trash2, X, AlertTriangle, Image as ImageIcon, Upload, Calendar } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Amenity } from '../../data/mockData';
+import { sortByDateDesc, formatDateVN, formatDateTimeVN } from '../../utils/date';
 
 const PRODUCT_TYPE_LABELS: Record<string, string> = {
   'all': 'Tất cả',
@@ -174,7 +175,7 @@ export const AmenitiesList: React.FC = () => {
       </div>
 
       {/* Main Table */}
-      <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -182,6 +183,7 @@ export const AmenitiesList: React.FC = () => {
                 <th className="px-5 py-3">Tên Tiện Ích</th>
                 <th className="px-5 py-3 text-center w-20">Icon</th>
                 <th className="px-5 py-3">Loại hình sản phẩm</th>
+                <th className="px-5 py-3">Ngày cập nhật</th>
                 <th className="px-5 py-3">Trạng thái</th>
                 <th className="px-5 py-3 text-right">Hành động</th>
               </tr>
@@ -189,18 +191,18 @@ export const AmenitiesList: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-slate-755">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-slate-400 font-medium italic">
+                  <td colSpan={6} className="px-5 py-12 text-center text-slate-400 font-medium italic">
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : amenities.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-slate-400 font-medium italic">
+                  <td colSpan={6} className="px-5 py-12 text-center text-slate-400 font-medium italic">
                     Không có tiện ích nào.
                   </td>
                 </tr>
               ) : (
-                amenities.map((item) => (
+                sortByDateDesc(amenities).map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-3.5 font-bold text-slate-900">{item.name}</td>
                     <td className="px-5 py-3.5 text-center">
@@ -217,6 +219,24 @@ export const AmenitiesList: React.FC = () => {
                     <td className="px-5 py-3.5 text-slate-600 font-medium">
                       {PRODUCT_TYPE_LABELS[item.product_type] || item.product_type}
                     </td>
+
+                    {/* Updated / Created Date */}
+                    <td className="px-5 py-3.5 whitespace-nowrap text-slate-500">
+                      {item.updated_at || item.created_at ? (
+                        <div 
+                          className="flex items-center gap-1.5"
+                          title={item.updated_at ? `Cập nhật: ${formatDateTimeVN(item.updated_at)}` : `Tạo: ${formatDateTimeVN(item.created_at)}`}
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-[11px] font-medium text-slate-600">
+                            {formatDateVN(item.updated_at || item.created_at)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">Chưa có</span>
+                      )}
+                    </td>
+
                     <td className="px-5 py-3.5">
                       <button 
                         onClick={() => handleToggleActive(item)}
@@ -245,7 +265,7 @@ export const AmenitiesList: React.FC = () => {
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button
+                        <button 
                           onClick={() => handleDeleteClick(item)}
                           className="p-1.5 rounded text-slate-400 hover:bg-slate-100 hover:text-red-650 transition-colors cursor-pointer"
                           title="Xóa"

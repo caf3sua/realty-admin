@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Post } from '../../data/mockData';
 import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Calendar, Paperclip } from 'lucide-react';
+import { sortByDateDesc, formatDateVN, formatDateTimeVN } from '../../utils/date';
 
 export const PostList: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -47,14 +48,16 @@ export const PostList: React.FC = () => {
     );
   }
 
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          post.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (post.tags && post.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-                          (post.attachments && post.attachments.some(a => a.name.toLowerCase().includes(searchQuery.toLowerCase())));
-    const matchesCategory = categoryFilter === 'Tất cả' || post.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredPosts = sortByDateDesc(
+    posts.filter(post => {
+      const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            post.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (post.tags && post.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+                            (post.attachments && post.attachments.some(a => a.name.toLowerCase().includes(searchQuery.toLowerCase())));
+      const matchesCategory = categoryFilter === 'Tất cả' || post.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    })
+  );
 
   const categories = ['Tất cả', 'Tin tức', 'Thị trường', 'Quy hoạch', 'Cẩm nang', 'Dự án', 'Mua bán'];
 
@@ -175,9 +178,14 @@ export const PostList: React.FC = () => {
 
                     {/* Published Date */}
                     <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
+                      <div 
+                        className="flex items-center gap-1.5"
+                        title={post.updatedAt ? `Cập nhật: ${formatDateTimeVN(post.updatedAt)}` : `Xuất bản: ${formatDateTimeVN(post.publishedAt || post.createdAt)}`}
+                      >
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{post.publishedAt || 'Nháp'}</span>
+                        <span className="text-[11px] font-medium text-slate-600">
+                          {formatDateVN(post.updatedAt || post.publishedAt || post.createdAt)}
+                        </span>
                       </div>
                     </td>
 

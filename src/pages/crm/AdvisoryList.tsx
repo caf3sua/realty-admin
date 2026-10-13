@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Advisory } from '../../data/mockData';
 import { Search, Eye, Trash2, AlertTriangle, ExternalLink, Calendar, Phone } from 'lucide-react';
+import { sortByDateDesc, formatDateTimeVN } from '../../utils/date';
 
 export const AdvisoryList: React.FC = () => {
   const [advisories, setAdvisories] = useState<Advisory[]>([]);
@@ -134,7 +135,7 @@ export const AdvisoryList: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-750">
                 {advisories.length > 0 ? (
-                  advisories.map((adv) => (
+                  sortByDateDesc(advisories).map((adv) => (
                     <tr 
                       key={adv.id} 
                       className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${selectedAdvisory?.id === adv.id ? 'bg-indigo-50/30' : ''}`}
@@ -187,13 +188,10 @@ export const AdvisoryList: React.FC = () => {
                       </td>
 
                       {/* Date */}
-                      <td className="px-5 py-3.5 text-slate-400 font-semibold">
-                        {adv.createdAt ? new Date(adv.createdAt).toLocaleDateString('vi-VN', {
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : '—'}
+                      <td className="px-5 py-3.5 text-slate-400 font-semibold whitespace-nowrap">
+                        <span title={adv.updatedAt ? `Cập nhật: ${formatDateTimeVN(adv.updatedAt)}` : `Gửi: ${formatDateTimeVN(adv.createdAt)}`}>
+                          {adv.updatedAt || adv.createdAt ? formatDateTimeVN(adv.updatedAt || adv.createdAt) : '—'}
+                        </span>
                       </td>
 
                       {/* Actions */}

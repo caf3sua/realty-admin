@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Product, Project } from '../../data/mockData';
-import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Filter } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, AlertTriangle, Filter, Calendar } from 'lucide-react';
+import { sortByDateDesc, formatDateVN, formatDateTimeVN } from '../../utils/date';
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -58,17 +59,19 @@ export const ProductList: React.FC = () => {
   }
 
 
-  const filteredProducts = products.filter(prod => {
-    const matchesSearch = prod.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          prod.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (prod.developer && prod.developer.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesProject = projectFilter === 'all' || prod.projectSlug === projectFilter;
-    const matchesType = typeFilter === 'all' || prod.productType === typeFilter;
-    const matchesStatus = statusFilter === 'all' || prod.status === statusFilter;
-    
-    return matchesSearch && matchesProject && matchesType && matchesStatus;
-  });
+  const filteredProducts = sortByDateDesc(
+    products.filter(prod => {
+      const matchesSearch = prod.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            prod.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (prod.developer && prod.developer.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesProject = projectFilter === 'all' || prod.projectSlug === projectFilter;
+      const matchesType = typeFilter === 'all' || prod.productType === typeFilter;
+      const matchesStatus = statusFilter === 'all' || prod.status === statusFilter;
+      
+      return matchesSearch && matchesProject && matchesType && matchesStatus;
+    })
+  );
 
   const getProjectName = (slug: string) => {
     if (slug === 'ngoai-du-an') return 'Ngoài dự án';
@@ -163,6 +166,7 @@ export const ProductList: React.FC = () => {
                 <th className="px-5 py-3">Dự án</th>
                 <th className="px-5 py-3">Loại hình</th>
                 <th className="px-5 py-3">Giá & Diện tích</th>
+                <th className="px-5 py-3">Ngày cập nhật</th>
                 <th className="px-5 py-3 text-center">Trạng thái</th>
                 <th className="px-5 py-3 text-center w-28">Hành động</th>
               </tr>
@@ -212,6 +216,23 @@ export const ProductList: React.FC = () => {
                       </div>
                     </td>
 
+                    {/* Updated / Created Date */}
+                    <td className="px-5 py-3.5 whitespace-nowrap text-slate-500">
+                      {prod.updatedAt || prod.createdAt ? (
+                        <div 
+                          className="flex items-center gap-1.5"
+                          title={prod.updatedAt ? `Cập nhật: ${formatDateTimeVN(prod.updatedAt)}` : `Tạo: ${formatDateTimeVN(prod.createdAt)}`}
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-[11px] font-medium text-slate-600">
+                            {formatDateVN(prod.updatedAt || prod.createdAt)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">Chưa có</span>
+                      )}
+                    </td>
+
                     {/* Status Badge */}
                     <td className="px-5 py-3.5 text-center">
                       <span className={`inline-block px-2 py-0.5 rounded text-[8px] font-bold border ${
@@ -255,7 +276,7 @@ export const ProductList: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-slate-400 font-medium italic">
+                  <td colSpan={7} className="px-5 py-12 text-center text-slate-400 font-medium italic">
                     Không tìm thấy sản phẩm bất động sản nào phù hợp.
                   </td>
                 </tr>
